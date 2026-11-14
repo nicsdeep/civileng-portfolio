@@ -1,16 +1,16 @@
-import { usePortfolio } from '../app/Layout'
-import { usePageTitle } from '../lib/usePageTitle'
-import { ExternalLinks, PageHeading } from '../components/ui'
+import { usePortfolio } from '../../app/PortfolioLayout'
+import { usePageTitle } from '../../lib/usePageTitle'
+import { ExternalLinks, PageHeading } from '../../components/ui'
 
 export function ContactPage() {
-  usePageTitle('Contact')
   const { cv } = usePortfolio()
+  usePageTitle('Contact', cv.name)
   const tel = cv.phone.replace(/[^\d+]/g, '')
 
   return (
     <div className="container-page max-w-3xl py-10">
       <PageHeading eyebrow="Contact" title="Let's" accent="talk.">
-        Open to full-stack and AI engineering roles, internships and freelance projects.
+        {cv.status || 'Get in touch about roles, projects and collaborations.'}
       </PageHeading>
 
       <div className="panel space-y-5 p-6 sm:p-8">

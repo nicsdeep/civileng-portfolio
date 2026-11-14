@@ -1,17 +1,17 @@
-import { usePortfolio } from '../app/Layout'
-import { usePageTitle } from '../lib/usePageTitle'
-import { Bullets, PageHeading, SectionTitle } from '../components/ui'
-import { dateRange } from '../content/normalize'
+import { usePortfolio } from '../../app/PortfolioLayout'
+import { usePageTitle } from '../../lib/usePageTitle'
+import { Bullets, PageHeading, SectionTitle } from '../../components/ui'
+import { dateRange } from '../../content/normalize'
 
 export function ExperiencePage() {
-  usePageTitle('Experience')
   const { cv } = usePortfolio()
+  usePageTitle('Experience', cv.name)
 
   return (
     <div className="container-page max-w-4xl py-10">
       <PageHeading eyebrow="Career" title="Experience &" accent="education." />
 
-      <section aria-labelledby="work">
+      {cv.experience.length > 0 && <section aria-labelledby="work">
         <SectionTitle id="work">Work</SectionTitle>
         <ol className="space-y-5">
           {cv.experience.map((e) => (
@@ -25,10 +25,10 @@ export function ExperiencePage() {
             </li>
           ))}
         </ol>
-      </section>
+      </section>}
 
       {cv.education.length > 0 && (
-        <section className="mt-12" aria-labelledby="education">
+        <section className={cv.experience.length > 0 ? 'mt-12' : ''} aria-labelledby="education">
           <SectionTitle id="education">Education</SectionTitle>
           <ol className="space-y-5">
             {cv.education.map((e) => (

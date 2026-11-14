@@ -1,10 +1,10 @@
-import { usePortfolio } from '../app/Layout'
-import { usePageTitle } from '../lib/usePageTitle'
-import { Chips, ExternalLinks, PageHeading, StatusMessage } from '../components/ui'
+import { usePortfolio } from '../../app/PortfolioLayout'
+import { usePageTitle } from '../../lib/usePageTitle'
+import { Chips, ExternalLinks, PageHeading, StatusMessage } from '../../components/ui'
 
 export function ProjectsPage() {
-  usePageTitle('Projects')
   const { cv } = usePortfolio()
+  usePageTitle('Projects', cv.name)
 
   return (
     <div className="container-page max-w-4xl py-10">

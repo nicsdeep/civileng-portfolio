@@ -1,18 +1,18 @@
 import { Link } from 'react-router'
-import { usePortfolio } from '../app/Layout'
-import { usePageTitle } from '../lib/usePageTitle'
-import { Chips, ExternalLinks, SectionTitle } from '../components/ui'
-import { dateRange } from '../content/normalize'
+import { usePortfolio } from '../../app/PortfolioLayout'
+import { usePageTitle } from '../../lib/usePageTitle'
+import { Chips, ExternalLinks, SectionTitle } from '../../components/ui'
+import { dateRange } from '../../content/normalize'
 
-/** "Nicholas Kinyae Kioko" → ["Nicholas Kinyae", "Kioko"], for the italic accent. */
+/** "Jane Wanjiru Doe" → ["Jane Wanjiru", "Doe"], for the italic accent. */
 function splitName(name: string): [string, string] {
   const i = name.lastIndexOf(' ')
   return i > 0 ? [name.slice(0, i), name.slice(i + 1)] : ['', name]
 }
 
-export function HomePage() {
-  usePageTitle()
-  const { cv } = usePortfolio()
+export function OverviewPage() {
+  const { cv, basePath } = usePortfolio()
+  usePageTitle(cv.name)
   const [first, last] = splitName(cv.name)
   const featured = cv.projects.filter((p) => p.featured).slice(0, 3)
   const recent = cv.experience.slice(0, 3)
@@ -31,8 +31,8 @@ export function HomePage() {
         </p>
         {cv.summary && <p className="mt-6 max-w-3xl text-lg text-muted">{cv.summary}</p>}
         <div className="no-print mt-8 flex flex-wrap gap-3">
-          <Link to="/projects" className="btn-primary h-11 px-5 text-base">View projects</Link>
-          <Link to="/contact" className="btn-secondary h-11 px-5 text-base">Get in touch</Link>
+          {cv.projects.length > 0 && <Link to={`${basePath}/projects`} className="btn-primary h-11 px-5 text-base">View projects</Link>}
+          <Link to={`${basePath}/contact`} className={`${cv.projects.length > 0 ? 'btn-secondary' : 'btn-primary'} h-11 px-5 text-base`}>Get in touch</Link>
           <button type="button" className="btn-quiet h-11 px-3" onClick={() => window.print()}>Print / save as PDF</button>
         </div>
         <ExternalLinks links={cv.links} className="mt-6" />
@@ -42,7 +42,7 @@ export function HomePage() {
         <section className="py-8" aria-labelledby="featured">
           <div className="flex items-baseline justify-between gap-4">
             <SectionTitle id="featured">Featured <em className="text-brand-italic">work</em></SectionTitle>
-            <Link to="/projects" className="link no-print text-sm">All projects →</Link>
+            <Link to={`${basePath}/projects`} className="link no-print text-sm">All projects →</Link>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             {featured.map((p) => (
@@ -71,14 +71,14 @@ export function HomePage() {
                 </li>
               ))}
             </ol>
-            <Link to="/experience" className="link no-print mt-4 inline-block text-sm">Full experience & education →</Link>
+            <Link to={`${basePath}/experience`} className="link no-print mt-4 inline-block text-sm">Full experience & education →</Link>
           </section>
         )}
         {topSkills.length > 0 && (
           <section aria-labelledby="skills">
             <SectionTitle id="skills">Core <em className="text-brand-italic">skills</em></SectionTitle>
             <Chips items={topSkills} label="Core skills" />
-            <Link to="/skills" className="link no-print mt-4 inline-block text-sm">Skills & certifications →</Link>
+            <Link to={`${basePath}/skills`} className="link no-print mt-4 inline-block text-sm">Skills & certifications →</Link>
           </section>
         )}
       </div>

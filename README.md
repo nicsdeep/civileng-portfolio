@@ -1,29 +1,32 @@
 # CivilEng Portfolio
 
-Digital CV portfolio for Nicholas Kinyae Kioko, part of CivilEng alongside
+Turn a résumé into a portfolio website. Part of CivilEng, alongside
 [ResearchHub](https://civileng-researchhub.vercel.app).
 Live at <https://civileng-portfolio.vercel.app>.
 
-- **Public pages:** home, experience & education, projects, skills & certifications, contact. Includes "Print / save as PDF".
-- **Editor** at `/editor`: sign in with your CivilEng account (the same as ResearchHub), edit every section, publish.
+## How it works
+
+1. **Create** (`/create`): upload a PDF or Word (.docx) résumé, paste its text, or start from scratch.
+   The file is read **in the browser** by rules in `src/features/import/` (no AI, no upload): text and layout come
+   from `extract.ts` (pdf.js for PDF, the document XML for .docx), and `parse.ts` finds the sections.
+2. **Edit** (`/editor`): sign in with a CivilEng account (shared with ResearchHub), check every section, choose a
+   public address. The unsaved draft waits in the browser's local storage while the visitor signs in, and is
+   removed once saved.
+3. **Publish**: the portfolio is public at `/p/<address>`. `/example` shows a made-up person.
+
+Phone numbers are never copied from a résumé onto the public page; people can add one in the editor if they want.
 
 ## Stack
 
-Vite, React 19, TypeScript, Tailwind 4, React Router 7, TanStack Query, Supabase (auth + Postgres), deployed on Vercel.
+Vite, React 19, TypeScript, Tailwind 4, React Router 7, TanStack Query, Supabase (auth + Postgres), pdf.js and
+fflate (loaded only on the Create page), deployed on Vercel.
 
-## How content works
+## Data
 
-- `src/content/cv.ts` holds the CV bundled with the site. The site shows it until a portfolio is published, and falls back to it if the database cannot be reached.
-- Saving in `/editor` writes one row to `public.pf_profiles` (the whole CV as JSON).
-- The public site shows the **published** row of the user set in `VITE_PORTFOLIO_OWNER_ID`. Nobody else's row can appear there.
-- All stored content goes through `normalizeCv` before it is shown. It drops unknown fields and keeps only `http(s)` and `mailto` links.
-
-## First-time setup after merging
-
-1. When this reaches `main`, the **Supabase migrations** workflow creates `pf_profiles` and adds this site's URL to the shared auth redirect list. Check the run under Actions.
-2. Sign in at `/sign-in` (or create an account), open `/editor` and copy the user ID shown there.
-3. In Vercel → Settings → Environment Variables, add `VITE_PORTFOLIO_OWNER_ID=<that id>` for Production and Preview, then redeploy.
-4. In `/editor`, tick **Published** and press **Save**.
+`public.pf_profiles`: one row per user with the portfolio as JSON (`src/content/types.ts`), a unique `slug` and
+`published`. Row Level Security: owners read and write only their own row; visitors read only the public columns
+of published rows. All stored content goes through `normalizeCv` before it is shown (only `http(s)` and `mailto`
+links survive).
 
 ## Local development
 

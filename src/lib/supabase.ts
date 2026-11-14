@@ -10,12 +10,6 @@ export const supabase = createClient(url, key, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
 })
 
-/** The user whose published portfolio the public site shows (see .env.example). */
-export const portfolioOwnerId: string | null = (() => {
-  const id = (import.meta.env.VITE_PORTFOLIO_OWNER_ID ?? '').trim().toLowerCase()
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id) ? id : null
-})()
-
 /** Turns Supabase auth errors into plain, actionable messages. */
 export function authMessage(error: { message?: string; code?: string } | null): string {
   const text = error?.message ?? ''

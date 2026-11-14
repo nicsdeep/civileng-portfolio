@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { dateRange, normalizeCv, safeUrl } from '../src/content/normalize'
-import { bundledCv } from '../src/content/cv'
+import { exampleCv } from '../src/content/example'
 
 describe('safeUrl', () => {
   it('keeps web and email links', () => {
-    expect(safeUrl('https://github.com/nicsdee')).toBe('https://github.com/nicsdee')
+    expect(safeUrl('https://github.com/janedoe')).toBe('https://github.com/janedoe')
     expect(safeUrl(' http://example.com ')).toBe('http://example.com')
     expect(safeUrl('mailto:someone@example.com')).toBe('mailto:someone@example.com')
   })
@@ -14,14 +14,14 @@ describe('safeUrl', () => {
     expect(safeUrl('JavaScript:alert(1)')).toBe('')
     expect(safeUrl('data:text/html,<script>alert(1)</script>')).toBe('')
     expect(safeUrl('/projects')).toBe('')
-    expect(safeUrl('github.com/nicsdee')).toBe('')
+    expect(safeUrl('github.com/janedoe')).toBe('')
     expect(safeUrl(42)).toBe('')
   })
 })
 
 describe('normalizeCv', () => {
-  it('leaves the bundled CV unchanged', () => {
-    expect(normalizeCv(bundledCv)).toEqual(bundledCv)
+  it('leaves the example portfolio unchanged', () => {
+    expect(normalizeCv(exampleCv)).toEqual(exampleCv)
   })
 
   it('turns anything into a complete, empty CV', () => {

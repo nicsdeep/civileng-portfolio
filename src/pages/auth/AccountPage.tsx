@@ -52,7 +52,7 @@ export function AccountPage() {
           <p className="font-medium break-all">{user?.email}</p>
           <p className="mt-1 text-sm text-muted">This account also works on CivilEng ResearchHub.</p>
           <div className="mt-5 flex flex-wrap gap-2">
-            <Link to="/editor" className="btn-primary">Edit portfolio</Link>
+            <Link to="/editor" className="btn-primary">My portfolio</Link>
             <button type="button" className="btn-secondary" onClick={signOut}>Sign out</button>
           </div>
         </section>
