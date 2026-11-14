@@ -1,0 +1,154 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens. Teal is the brand and link colour, orange is reserved for the
+ * main action on a page. Serif display type
+ * with an italic teal accent word; plain sans text everywhere else.
+ */
+:root {
+  --bg: #f3f7f6;
+  --surface: #ffffff;
+  --surface-2: #f7faf9;
+  --ink: #13201e;
+  --muted: #667673;
+  --line: #e1e8e6;
+  --accent: #0e6b63;
+  --accent-hover: #0a524c;
+  --accent-soft: #dcefec;
+  --brand-navy: #072c58;
+  --brand-italic: #039694;
+  --action: #ff4f0a;
+  --action-hover: #e54400;
+  --action-ink: #ffffff;
+  --ok: #0b7a4b;
+  --danger: #b42318;
+  --glow: rgba(69, 174, 163, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1413;
+    --surface: #151d1c;
+    --surface-2: #1a2423;
+    --ink: #e6eeec;
+    --muted: #98a9a5;
+    --line: #26332f;
+    --accent: #6fd0c5;
+    --accent-hover: #9ae0d8;
+    --accent-soft: #1b3330;
+    --brand-navy: #e3ebf5;
+    --brand-italic: #4fc3bd;
+    --action: #ff6a2b;
+    --action-hover: #ff8550;
+    --action-ink: #1a0b03;
+    --ok: #5fd39a;
+    --danger: #f39a90;
+    --glow: rgba(111, 208, 197, 0.08);
+  }
+}
+
+@theme {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-italic: var(--brand-italic);
+  --color-action: var(--action);
+  --color-action-hover: var(--action-hover);
+  --color-action-ink: var(--action-ink);
+  --color-ok: var(--ok);
+  --color-danger: var(--danger);
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Instrument Serif', ui-serif, Georgia, serif;
+}
+
+@layer base {
+  html {
+    background:
+      radial-gradient(60rem 30rem at 10% -10%, var(--glow), transparent 70%),
+      var(--bg);
+    background-attachment: fixed;
+    color: var(--ink);
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply font-sans text-[16px] leading-relaxed antialiased;
+  }
+  h1, h2 {
+    text-wrap: balance;
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  ::selection {
+    background: var(--accent-soft);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+}
+
+/* Reusable patterns, usable like any Tailwind utility. */
+@utility container-page {
+  @apply mx-auto w-full max-w-6xl px-4 sm:px-6;
+}
+@utility display {
+  @apply font-serif font-normal tracking-tight text-ink;
+}
+@utility link {
+  @apply text-accent underline-offset-2 hover:text-accent-hover hover:underline;
+}
+@utility panel {
+  @apply rounded-2xl border border-line bg-surface;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-action text-action-ink hover:bg-action-hover;
+}
+@utility btn-secondary {
+  @apply btn border border-line bg-surface text-ink hover:bg-surface-2;
+}
+@utility btn-quiet {
+  @apply inline-flex items-center gap-1 rounded-full px-2 py-1 text-sm text-muted transition-colors hover:bg-accent-soft hover:text-accent;
+}
+@utility field {
+  @apply w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-accent focus:outline-none;
+}
+/* The official mark keeps its navy and teal; in dark mode it sits on a white tile. */
+@utility brand-mark {
+  @apply shrink-0;
+  @media (prefers-color-scheme: dark) {
+    background: #ffffff;
+    border-radius: 0.6rem;
+    padding: 0.2rem 0.3rem;
+  }
+}
+@utility label {
+  @apply mb-1 block text-xs font-semibold tracking-[0.08em] text-muted uppercase;
+}
+@utility chip {
+  @apply inline-flex items-center rounded-full border border-line bg-surface-2 px-2.5 py-0.5 text-xs text-ink;
+}
+@utility eyebrow {
+  @apply text-xs font-semibold tracking-[0.12em] text-accent uppercase;
+}
+
+/* "Print / save as PDF": just the CV, in black on white. */
+@media print {
+  html { background: #fff !important; color: #000; }
+  .no-print { display: none !important; }
+  .panel { border-color: #ccc; break-inside: avoid; }
+  a { color: inherit; text-decoration: none; }
+  main { padding: 0 !important; }
+}

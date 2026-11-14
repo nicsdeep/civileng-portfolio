@@ -1,0 +1,50 @@
+# Checks every push and pull request: lint, type check, unit tests, build,
+# and the database security (Row Level Security) tests.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  database-security:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run Row Level Security tests
+        run: |
+          supabase/tests/run-rls-tests.sh 2>&1 | tee rls.log
+          # Expect exactly the 5 intentional errors from the test script.
+          test "$(grep -c 'ERROR' rls.log)" -eq 5 || { echo "::error::Unexpected RLS test result"; exit 1; }
+          grep -q 'permission denied for table pf_profiles' rls.log
+          # Nobody but the owner may see an unpublished portfolio.
+          grep -A2 'b_sees_unpublished' rls.log | grep -qE '^ +0$'
+          grep -A2 'anon_sees_unpublished' rls.log | grep -qE '^ +0$'
