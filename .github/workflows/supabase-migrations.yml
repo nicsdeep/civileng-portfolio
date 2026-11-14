@@ -18,7 +18,7 @@ name: Supabase migrations
 on:
   push:
     branches: [main]
-    paths: ['supabase/migrations/**', 'supabase/config.toml']
+    paths: ['supabase/migrations/**', 'supabase/config.toml', '.github/workflows/supabase-migrations.yml']
   workflow_dispatch:
 
 concurrency:
@@ -61,7 +61,8 @@ jobs:
           [ -n "$SUPABASE_DB_PASSWORD" ] || unset SUPABASE_DB_PASSWORD
           supabase migration list --linked | tee migrations.txt
           # Rows with an empty "Local" column and a version in "Remote".
-          awk -F'|' '{ l=$1; r=$2; gsub(/[ \t]/, "", l); gsub(/[ \t]/, "", r); if (l == "" && r ~ /^[0-9]+$/) print r }' migrations.txt |
+          # The CLI wraps values in backticks, e.g. "` `" for an empty cell.
+          awk -F'|' '{ l=$1; r=$2; gsub(/[ \t`]/, "", l); gsub(/[ \t`]/, "", r); if (l == "" && r ~ /^[0-9]+$/) print r }' migrations.txt |
             while read -r version; do
               echo "Remote-only migration $version (another CivilEng app): adding a placeholder"
               echo "-- Applied by another CivilEng app; placeholder so db push accepts the shared history." \
