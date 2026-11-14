@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session, User } from '@supabase/supabase-js'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { clearDraft } from '../import/draft'
 
 interface AuthState {
   user: User | null
@@ -30,7 +31,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         recovering: event === 'PASSWORD_RECOVERY' ? true : event === 'SIGNED_OUT' ? false : s.recovering,
       }))
       // Never show one person's draft to the next person on this device.
-      if (event === 'SIGNED_OUT') queryClient.removeQueries({ queryKey: ['my-portfolio'] })
+      // Also drop any unsaved résumé, so a shared computer keeps nothing behind.
+      if (event === 'SIGNED_OUT') {
+        queryClient.removeQueries({ queryKey: ['my-portfolio'] })
+        clearDraft()
+      }
     })
     return () => data.subscription.unsubscribe()
   }, [queryClient])

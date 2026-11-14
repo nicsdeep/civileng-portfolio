@@ -54,6 +54,12 @@ export async function fetchMyPortfolio(userId: string): Promise<PortfolioRow | n
   return data as PortfolioRow | null
 }
 
+/** Deletes the user's portfolio: it disappears from /p/<address> and the address becomes free. */
+export async function deleteMyPortfolio(userId: string): Promise<void> {
+  const { error } = await supabase.from('pf_profiles').delete().eq('user_id', userId)
+  if (error) throw error
+}
+
 export class SaveError extends Error {}
 
 export async function saveMyPortfolio(userId: string, cv: Cv, slug: string | null, published: boolean): Promise<PortfolioRow> {

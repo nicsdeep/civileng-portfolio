@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../features/auth/AuthProvider'
-import { fetchMyPortfolio, saveMyPortfolio, slugProblem, type PortfolioRow } from '../features/portfolio/api'
-import { clearDraft, loadDraft, type Draft } from '../features/import/draft'
+import { deleteMyPortfolio, fetchMyPortfolio, saveMyPortfolio, slugProblem, type PortfolioRow } from '../features/portfolio/api'
+import { clearDraft, loadDraft, saveDraft, type Draft } from '../features/import/draft'
+import { ConfirmButton } from '../components/ConfirmButton'
 import { slugify } from '../features/import/parse'
 import { usePageTitle } from '../lib/usePageTitle'
 import { emptyCv } from '../content/cv'
@@ -55,6 +56,9 @@ function Editor({ userId, row }: { userId: string; row: PortfolioRow | null }) {
   const [savedSlug, setSavedSlug] = useState(row?.published ? row.slug : null)
   const [tab, setTab] = useState<'profile' | ListSection>('profile')
   const [problem, setProblem] = useState<string | null>(null)
+  // Last removal that can still be undone (removing the résumé, clearing all fields).
+  const [undo, setUndo] = useState<{ message: string; form: CvForm; draft: Draft | null } | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   const current = useMemo(() => fromForm(form), [form])
   const dirty = snapshot(current, slug, published) !== savedSnapshot
@@ -94,11 +98,51 @@ function Editor({ userId, row }: { userId: string; row: PortfolioRow | null }) {
     save.mutate(address || null)
   }
 
-  function discardDraft() {
+  /** Drops the uploaded résumé: back to the saved portfolio, or an empty one. */
+  function removeResume() {
+    setUndo({ message: row ? 'Résumé removed. Showing your saved portfolio.' : 'Résumé removed.', form, draft })
+    setNotice(null)
     clearDraft()
     setDraft(null)
     setForm(toForm(saved))
   }
+
+  /** Empties every field. Nothing changes online until Save. */
+  function clearAll() {
+    setUndo({ message: 'All fields cleared. Nothing changes on your public page until you press Save.', form, draft })
+    setNotice(null)
+    setForm(toForm(emptyCv))
+  }
+
+  function undoLast() {
+    if (!undo) return
+    setForm(undo.form)
+    if (undo.draft) {
+      saveDraft(undo.draft.cv, undo.draft.source)
+      setDraft(undo.draft)
+    }
+    setUndo(null)
+  }
+
+  const remove = useMutation({
+    mutationFn: () => deleteMyPortfolio(userId),
+    onSuccess: () => {
+      clearDraft()
+      setDraft(null)
+      setUndo(null)
+      setForm(toForm(emptyCv))
+      setSlug('')
+      setPublished(false)
+      setSavedSnapshot('')
+      setSavedSlug(null)
+      setTab('profile')
+      setNotice('Your portfolio was deleted. Its public address no longer works and is free for anyone to use.')
+      queryClient.setQueryData(['my-portfolio', userId], null)
+      queryClient.invalidateQueries({ queryKey: ['portfolio'] })
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    },
+  })
+  const hasSaved = savedSnapshot !== ''
 
   const setProfile = (key: string, value: FormValue) => setForm((f) => ({ ...f, profile: { ...f.profile, [key]: value } }))
   const setList = (key: ListSection, items: FormItem[]) => setForm((f) => ({ ...f, lists: { ...f.lists, [key]: items } }))
@@ -123,10 +167,20 @@ function Editor({ userId, row }: { userId: string; row: PortfolioRow | null }) {
             <strong>Filled in from {draft.source}.</strong> Check each tab, then press Save.
             {row && ' Saving replaces your current portfolio.'}
           </p>
-          <button type="button" className="btn-quiet" onClick={discardDraft}>Discard</button>
+          <button type="button" className="btn-secondary h-9 py-0" onClick={removeResume}>Remove résumé</button>
         </div>
       )}
-      {!draft && isEmpty && (
+      {undo && (
+        <div role="status" className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3 text-sm">
+          <p className="flex-1">{undo.message}</p>
+          <button type="button" className="btn-secondary h-9 py-0" onClick={undoLast}>Undo</button>
+          <button type="button" className="btn-quiet" aria-label="Dismiss" onClick={() => setUndo(null)}>✕</button>
+        </div>
+      )}
+      {notice && (
+        <p role="status" className="mt-4 rounded-2xl bg-accent-soft px-4 py-3 text-sm">{notice}</p>
+      )}
+      {!draft && !undo && isEmpty && (
         <p className="mt-4 rounded-2xl bg-accent-soft px-4 py-3 text-sm">
           Have a résumé? <Link to="/create" className="link font-semibold">Upload it</Link> and we will fill this in for you.
         </p>
@@ -187,9 +241,34 @@ function Editor({ userId, row }: { userId: string; row: PortfolioRow | null }) {
         )}
       </div>
 
-      <p className="mt-10 border-t border-line pt-6 text-sm text-muted">
-        Want to start over? <Link to="/create" className="link">Upload a different résumé</Link>.
-      </p>
+      <section aria-labelledby="start-over" className="mt-12 border-t border-line pt-6">
+        <h2 id="start-over" className="label">Start over</h2>
+        <div className="mt-2 grid gap-4 sm:grid-cols-3">
+          <div>
+            <Link to="/create" className="btn-secondary">Upload a different résumé</Link>
+            <p className="mt-1 text-xs text-muted">Fills the editor again. Your page only changes when you save.</p>
+          </div>
+          <div>
+            <button type="button" className="btn-secondary" onClick={clearAll} disabled={isEmpty && !draft}>Clear all fields</button>
+            <p className="mt-1 text-xs text-muted">Empties the editor. You can undo it.</p>
+          </div>
+          {hasSaved && (
+            <div>
+              <ConfirmButton
+                className="btn border border-danger/40 bg-surface text-danger hover:bg-danger/10"
+                question={<>Delete your portfolio{savedSlug ? <> and take <strong>/p/{savedSlug}</strong> offline</> : ''}? This cannot be undone.</>}
+                confirmLabel="Delete for good"
+                onConfirm={() => remove.mutate()}
+                disabled={remove.isPending}
+              >
+                {remove.isPending ? 'Deleting…' : 'Delete portfolio'}
+              </ConfirmButton>
+              <p className="mt-1 text-xs text-muted">Removes it from the site and the database.</p>
+              {remove.isError && <p role="alert" className="mt-1 text-sm text-danger">Could not delete: {(remove.error as Error).message}</p>}
+            </div>
+          )}
+        </div>
+      </section>
     </form>
   )
 }
@@ -224,15 +303,9 @@ function ListEditor({ section, items, onChange }: { section: (typeof SECTIONS)[n
               </button>
               <button type="button" className="btn-quiet" aria-label="Move up" disabled={index === 0} onClick={() => move(index, -1)}>↑</button>
               <button type="button" className="btn-quiet" aria-label="Move down" disabled={index === items.length - 1} onClick={() => move(index, 1)}>↓</button>
-              <button
-                type="button"
-                className="btn-quiet hover:!text-danger"
-                onClick={() => {
-                  if (window.confirm(`Remove “${section.title(item)}”?`)) onChange(items.filter((i) => i._key !== item._key))
-                }}
-              >
+              <ConfirmButton className="btn-quiet hover:!text-danger" question="Remove?" confirmLabel="Remove" onConfirm={() => onChange(items.filter((i) => i._key !== item._key))}>
                 Remove
-              </button>
+              </ConfirmButton>
             </div>
             {expanded && (
               <div className="grid gap-4 border-t border-line p-4 sm:grid-cols-2 sm:p-5">
