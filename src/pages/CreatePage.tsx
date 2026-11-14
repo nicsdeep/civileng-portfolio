@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router'
 import { usePageTitle } from '../lib/usePageTitle'
 import { PageHeading } from '../components/ui'
 import { parseResume, type ParseResult } from '../features/import/parse'
-import { saveDraft } from '../features/import/draft'
+import { clearDraft, loadDraft, saveDraft, type Draft } from '../features/import/draft'
+import { ConfirmButton } from '../components/ConfirmButton'
 import { useAuth } from '../features/auth/AuthProvider'
 
 type Status = { kind: 'idle' } | { kind: 'reading'; name: string } | { kind: 'error'; message: string } | { kind: 'done'; result: ParseResult; source: string }
@@ -13,9 +14,14 @@ export function CreatePage() {
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
   const [pasted, setPasted] = useState('')
   const [dragging, setDragging] = useState(false)
+  // A résumé read earlier in this browser and not yet saved.
+  const [draft, setDraft] = useState<Draft | null>(() => loadDraft())
+  const [notice, setNotice] = useState<string | null>(null)
+  const navigate = useNavigate()
   const input = useRef<HTMLInputElement>(null)
 
   async function readFile(file: File) {
+    setNotice(null)
     setStatus({ kind: 'reading', name: file.name })
     try {
       const { extractText } = await import('../features/import/extract')
@@ -34,7 +40,9 @@ export function CreatePage() {
       return
     }
     saveDraft(result.cv, source)
+    setDraft(loadDraft())
     setStatus({ kind: 'done', result, source })
+    window.scrollTo({ top: 0 })
   }
 
   function onDrop(event: DragEvent) {
@@ -50,13 +58,58 @@ export function CreatePage() {
     finish(pasted, 'pasted text')
   }
 
-  if (status.kind === 'done') return <Result result={status.result} source={status.source} onRestart={() => setStatus({ kind: 'idle' })} />
+  /** Deletes the résumé read in this browser and goes back to the start. */
+  function removeResume(message: string | null) {
+    clearDraft()
+    setDraft(null)
+    setPasted('')
+    setStatus({ kind: 'idle' })
+    setNotice(message)
+    window.scrollTo({ top: 0 }) // so the confirmation message is in view
+  }
+
+  if (status.kind === 'done') {
+    return (
+      <Result
+        result={status.result}
+        source={status.source}
+        onReplace={() => removeResume(null)}
+        onRemove={() => removeResume('Résumé removed. Nothing from it is kept in this browser.')}
+      />
+    )
+  }
 
   return (
     <div className="container-page max-w-4xl py-10">
       <PageHeading eyebrow="Create" title="Start with your" accent="résumé.">
         Your file is read in this browser. Nothing is uploaded or saved until you choose to publish.
       </PageHeading>
+
+      {notice && (
+        <p role="status" className="mb-6 flex items-center justify-between gap-3 rounded-xl bg-accent-soft px-4 py-3 text-sm">
+          {notice}
+          <button type="button" className="btn-quiet" onClick={() => setNotice(null)} aria-label="Dismiss">✕</button>
+        </p>
+      )}
+
+      {draft && status.kind !== 'reading' && (
+        <section aria-labelledby="in-progress" className="panel mb-6 flex flex-wrap items-center gap-4 p-5">
+          <div className="min-w-0 flex-1">
+            <h2 id="in-progress" className="label">Résumé in progress</h2>
+            <p className="font-semibold">{draft.cv.name || 'Unnamed résumé'}</p>
+            <p className="text-sm text-muted">
+              From {draft.source}
+              {draft.createdAt && ` · ${new Date(draft.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}`}. Not saved yet.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" className="btn-primary" onClick={() => navigate('/editor')}>Continue</button>
+            <ConfirmButton question="Remove this résumé from this browser?" confirmLabel="Remove" onConfirm={() => removeResume('Résumé removed. Nothing from it is kept in this browser.')}>
+              Remove
+            </ConfirmButton>
+          </div>
+        </section>
+      )}
 
       <div
         className={`panel flex flex-col items-center justify-center gap-3 border-2 border-dashed p-8 text-center sm:p-12 ${dragging ? 'border-accent bg-accent-soft' : ''}`}
@@ -68,7 +121,10 @@ export function CreatePage() {
         onDrop={onDrop}
       >
         <p className="display text-3xl">Upload a <em className="text-brand-italic">file</em></p>
-        <p className="text-sm text-muted">PDF or Word (.docx), up to 10 MB. Drag it here or choose it.</p>
+        <p className="text-sm text-muted">
+          PDF or Word (.docx), up to 10 MB. Drag it here or choose it.
+          {draft && ' A new file replaces the résumé in progress.'}
+        </p>
         <input
           ref={input}
           type="file"
@@ -92,7 +148,10 @@ export function CreatePage() {
         <label htmlFor="pasted" className="display block text-2xl">Or paste the <em className="text-brand-italic">text</em></label>
         <p className="mt-1 text-sm text-muted">Copy everything from your résumé document and paste it here.</p>
         <textarea id="pasted" className="field mt-3 min-h-48 text-base sm:text-sm" value={pasted} onChange={(e) => setPasted(e.target.value)} />
-        <button type="submit" className="btn-secondary mt-3">Build my portfolio</button>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button type="submit" className="btn-secondary" disabled={!pasted.trim()}>Build my portfolio</button>
+          {pasted && <button type="button" className="btn-quiet" onClick={() => setPasted('')}>Clear text</button>}
+        </div>
       </form>
 
       <p className="mt-6 text-sm text-muted">
@@ -102,7 +161,7 @@ export function CreatePage() {
   )
 }
 
-function Result({ result, source, onRestart }: { result: ParseResult; source: string; onRestart: () => void }) {
+function Result({ result, source, onReplace, onRemove }: { result: ParseResult; source: string; onReplace: () => void; onRemove: () => void }) {
   const { user } = useAuth()
   const navigate = useNavigate()
   const { cv } = result
@@ -142,7 +201,10 @@ function Result({ result, source, onRestart }: { result: ParseResult; source: st
         <button type="button" className="btn-primary h-11 px-5 text-base" onClick={() => navigate('/editor')}>
           {user ? 'Review and edit' : 'Sign in to review and publish'}
         </button>
-        <button type="button" className="btn-quiet" onClick={onRestart}>Try another file</button>
+        <button type="button" className="btn-secondary h-11 px-5" onClick={onReplace}>Use a different file</button>
+        <ConfirmButton question="Remove this résumé? Nothing is kept." confirmLabel="Remove résumé" onConfirm={onRemove}>
+          Remove résumé
+        </ConfirmButton>
       </div>
       {!user && (
         <p className="mt-3 text-sm text-muted">
