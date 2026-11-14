@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../features/auth/AuthProvider'
-import { fetchMyPortfolio, saveMyPortfolio, type PortfolioRow } from '../features/portfolio/api'
-import { portfolioOwnerId } from '../lib/supabase'
+import { fetchMyPortfolio, saveMyPortfolio, slugProblem, type PortfolioRow } from '../features/portfolio/api'
+import { clearDraft, loadDraft, type Draft } from '../features/import/draft'
+import { slugify } from '../features/import/parse'
 import { usePageTitle } from '../lib/usePageTitle'
-import { bundledCv, emptyCv } from '../content/cv'
+import { emptyCv } from '../content/cv'
 import { normalizeCv } from '../content/normalize'
 import type { Link as CvLink } from '../content/types'
 import { StatusMessage } from '../components/ui'
@@ -41,21 +42,22 @@ export function EditorPage() {
   return <Editor key={userId} userId={userId} row={mine.data} />
 }
 
-function startingContent(userId: string, row: PortfolioRow | null) {
-  if (row) return normalizeCv(row.content)
-  // The site owner (or anyone, before an owner is configured) starts from the bundled CV.
-  return !portfolioOwnerId || portfolioOwnerId === userId ? bundledCv : emptyCv
-}
-
 function Editor({ userId, row }: { userId: string; row: PortfolioRow | null }) {
   const queryClient = useQueryClient()
-  const [form, setForm] = useState<CvForm>(() => toForm(startingContent(userId, row)))
+  const [params] = useSearchParams()
+  const [draft, setDraft] = useState<Draft | null>(() => (params.get('start') === 'blank' ? null : loadDraft()))
+  const saved = row ? normalizeCv(row.content) : emptyCv
+  const [form, setForm] = useState<CvForm>(() => toForm(draft?.cv ?? saved))
+  const [slug, setSlug] = useState(row?.slug ?? '')
   const [published, setPublished] = useState(row?.published ?? false)
-  const [savedSnapshot, setSavedSnapshot] = useState(() => (row ? JSON.stringify([normalizeCv(row.content), row.published]) : ''))
+  const snapshot = (cv: unknown, s: string | null, p: boolean) => JSON.stringify([cv, s || null, p])
+  const [savedSnapshot, setSavedSnapshot] = useState(() => (row ? snapshot(saved, row.slug, row.published) : ''))
+  const [savedSlug, setSavedSlug] = useState(row?.published ? row.slug : null)
   const [tab, setTab] = useState<'profile' | ListSection>('profile')
+  const [problem, setProblem] = useState<string | null>(null)
 
   const current = useMemo(() => fromForm(form), [form])
-  const dirty = JSON.stringify([current, published]) !== savedSnapshot
+  const dirty = snapshot(current, slug, published) !== savedSnapshot
 
   useEffect(() => {
     if (!dirty) return
@@ -65,51 +67,95 @@ function Editor({ userId, row }: { userId: string; row: PortfolioRow | null }) {
   }, [dirty])
 
   const save = useMutation({
-    mutationFn: () => saveMyPortfolio(userId, current, published),
-    onSuccess: (saved) => {
-      setSavedSnapshot(JSON.stringify([normalizeCv(saved.content), saved.published]))
-      queryClient.setQueryData(['my-portfolio', userId], saved)
+    mutationFn: (address: string | null) => saveMyPortfolio(userId, current, address, published),
+    onSuccess: (row) => {
+      setSavedSnapshot(snapshot(normalizeCv(row.content), row.slug, row.published))
+      setSlug(row.slug ?? '')
+      setSavedSlug(row.published ? row.slug : null)
+      clearDraft()
+      setDraft(null)
+      queryClient.setQueryData(['my-portfolio', userId], row)
       queryClient.invalidateQueries({ queryKey: ['portfolio'] })
     },
   })
 
   function onSubmit(event: FormEvent) {
     event.preventDefault()
-    if (!current.name) return
-    save.mutate()
+    setProblem(null)
+    if (!current.name) return setProblem('Add your full name (Profile tab) before saving.')
+    // Suggest an address from the name the first time.
+    const address = slug.trim() || (published ? slugify(current.name) : '')
+    if (address) {
+      const issue = slugProblem(address)
+      if (issue) return setProblem(`Public address: ${issue}`)
+    }
+    if (published && !address) return setProblem('Choose a public address before publishing.')
+    setSlug(address)
+    save.mutate(address || null)
+  }
+
+  function discardDraft() {
+    clearDraft()
+    setDraft(null)
+    setForm(toForm(saved))
   }
 
   const setProfile = (key: string, value: FormValue) => setForm((f) => ({ ...f, profile: { ...f.profile, [key]: value } }))
   const setList = (key: ListSection, items: FormItem[]) => setForm((f) => ({ ...f, lists: { ...f.lists, [key]: items } }))
 
-  const isOwner = portfolioOwnerId === userId
   const tabs: { key: 'profile' | ListSection; label: string }[] = [{ key: 'profile', label: 'Profile' }, ...SECTIONS.map((s) => ({ key: s.key, label: s.label }))]
   const section = SECTIONS.find((s) => s.key === tab)
+  const isEmpty = !current.name && current.experience.length === 0 && current.education.length === 0
 
   return (
     <form onSubmit={onSubmit} className="container-page max-w-5xl py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="eyebrow">Signed in · <Link to="/account" className="link normal-case tracking-normal">account</Link></p>
+          <p className="eyebrow">Your portfolio · <Link to="/account" className="link normal-case tracking-normal">account</Link></p>
           <h1 className="display mt-1 text-5xl">Edit <em className="text-brand-italic">portfolio.</em></h1>
         </div>
-        <Link to="/" className="link text-sm" target="_blank">View public site ↗</Link>
+        {savedSlug && <Link to={`/p/${savedSlug}`} className="link text-sm" target="_blank">View your portfolio ↗</Link>}
       </div>
 
-      <OwnerNotice userId={userId} isOwner={isOwner} />
+      {draft && (
+        <div role="status" className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl bg-accent-soft px-4 py-3 text-sm">
+          <p className="flex-1">
+            <strong>Filled in from {draft.source}.</strong> Check each tab, then press Save.
+            {row && ' Saving replaces your current portfolio.'}
+          </p>
+          <button type="button" className="btn-quiet" onClick={discardDraft}>Discard</button>
+        </div>
+      )}
+      {!draft && isEmpty && (
+        <p className="mt-4 rounded-2xl bg-accent-soft px-4 py-3 text-sm">
+          Have a résumé? <Link to="/create" className="link font-semibold">Upload it</Link> and we will fill this in for you.
+        </p>
+      )}
 
       <div className="sticky top-16 z-10 -mx-4 mt-6 border-y border-line bg-bg/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-2xl sm:border">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <label className="flex min-w-0 flex-1 items-center gap-1 text-sm" htmlFor="slug">
+            <span className="shrink-0 text-muted">Address: /p/</span>
+            <input
+              id="slug"
+              className="field min-w-24 flex-1 py-1.5 text-base sm:text-sm"
+              placeholder={slugify(current.name) || 'your-name'}
+              value={slug}
+              onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 40))}
+              autoCapitalize="off"
+              spellCheck={false}
+            />
+          </label>
           <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium">
             <input type="checkbox" className="size-4 accent-[var(--accent)]" checked={published} onChange={(e) => setPublished(e.target.checked)} />
             Published
           </label>
           <span className="text-xs text-muted" role="status">
-            {save.isPending ? 'Saving…' : dirty ? 'Unsaved changes' : row || save.isSuccess ? 'All changes saved' : 'Not saved yet'}
+            {save.isPending ? 'Saving…' : dirty ? 'Unsaved changes' : 'All changes saved'}
           </span>
-          <button type="submit" className="btn-primary ml-auto" disabled={save.isPending || !dirty || !current.name}>Save</button>
+          <button type="submit" className="btn-primary" disabled={save.isPending || !dirty}>Save</button>
         </div>
-        {!current.name && <p className="mt-2 text-sm text-danger">Add your full name before saving.</p>}
+        {problem && <p role="alert" className="mt-2 text-sm text-danger">{problem}</p>}
         {save.isError && <p role="alert" className="mt-2 text-sm text-danger">Could not save: {(save.error as Error).message}</p>}
       </div>
 
@@ -141,38 +187,10 @@ function Editor({ userId, row }: { userId: string; row: PortfolioRow | null }) {
         )}
       </div>
 
-      <div className="mt-10 flex flex-wrap gap-3 border-t border-line pt-6 text-sm">
-        <button
-          type="button"
-          className="btn-quiet"
-          onClick={() => {
-            if (window.confirm('Replace everything in the editor with the CV bundled with the site? Nothing is saved until you press Save.')) setForm(toForm(bundledCv))
-          }}
-        >
-          Reset to bundled CV
-        </button>
-      </div>
+      <p className="mt-10 border-t border-line pt-6 text-sm text-muted">
+        Want to start over? <Link to="/create" className="link">Upload a different résumé</Link>.
+      </p>
     </form>
-  )
-}
-
-function OwnerNotice({ userId, isOwner }: { userId: string; isOwner: boolean }) {
-  if (isOwner) {
-    return (
-      <p className="mt-4 text-sm text-muted">
-        This is the portfolio shown on the public site. Untick <strong>Published</strong> to hide it; the site then shows the bundled CV.
-      </p>
-    )
-  }
-  return (
-    <div className="mt-4 rounded-2xl bg-accent-soft px-4 py-3 text-sm">
-      <p>
-        <strong>{portfolioOwnerId ? 'This account is not the site owner.' : 'The public site is not linked to an account yet.'}</strong>{' '}
-        It shows the CV bundled with the code until you link it. To show what you save here, add this environment variable in
-        Vercel (Project → Settings → Environment Variables) and redeploy:
-      </p>
-      <code className="mt-2 block rounded-lg bg-surface px-3 py-2 text-xs break-all select-all">VITE_PORTFOLIO_OWNER_ID={userId}</code>
-    </div>
   )
 }
 

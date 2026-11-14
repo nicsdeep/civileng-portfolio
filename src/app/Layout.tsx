@@ -1,50 +1,29 @@
 import { useEffect, useState } from 'react'
-import { Link, NavLink, Outlet, ScrollRestoration, useLocation, useOutletContext } from 'react-router'
+import { NavLink, Outlet, ScrollRestoration, useLocation } from 'react-router'
 import { BrandMark, Logo } from '../components/Logo'
 import { useAuth } from '../features/auth/AuthProvider'
-import { usePublicPortfolio, type PublicPortfolio } from '../features/portfolio/api'
-
-const NAV = [
-  { to: '/experience', label: 'Experience' },
-  { to: '/projects', label: 'Projects' },
-  { to: '/skills', label: 'Skills' },
-  { to: '/contact', label: 'Contact' },
-]
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   `rounded-full px-3 py-1.5 text-sm transition-colors ${isActive ? 'bg-accent-soft font-semibold text-accent' : 'text-muted hover:text-ink'}`
 
-/** The portfolio content, loaded once here and shared with every public page. */
-// eslint-disable-next-line react-refresh/only-export-components
-export function usePortfolio() {
-  return useOutletContext<PublicPortfolio>()
-}
-
-function EditLink() {
-  const { user } = useAuth()
-  if (!user) return null
-  return <NavLink to="/editor" className={navClass}>Edit</NavLink>
-}
-
-function PageSkeleton() {
+function AccountLinks({ mobile = false }: { mobile?: boolean }) {
+  const { user, loading } = useAuth()
+  const cls = (s: { isActive: boolean }) => `${navClass(s)} ${mobile ? 'py-2 text-base' : ''}`
+  if (loading) return null
+  if (!user) return <NavLink to="/sign-in" className={mobile ? cls : 'btn-secondary ml-2 h-9 py-0'}>Sign in</NavLink>
   return (
-    <div className="container-page py-16" role="status" aria-label="Loading">
-      <div className="animate-pulse space-y-4">
-        <div className="h-12 w-2/3 rounded bg-surface" />
-        <div className="h-4 w-1/2 rounded bg-surface" />
-        <div className="h-4 w-full rounded bg-surface" />
-        <div className="h-4 w-5/6 rounded bg-surface" />
-      </div>
-    </div>
+    <>
+      <NavLink to="/editor" className={cls}>My portfolio</NavLink>
+      <NavLink to="/account" className={cls}>Account</NavLink>
+    </>
   )
 }
 
+/** Site frame: header, footer and the page in between. */
 export function Layout() {
   const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
-  const portfolio = usePublicPortfolio()
   useEffect(() => setMenuOpen(false), [location.pathname])
-  const cv = portfolio.data?.cv
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -56,8 +35,9 @@ export function Layout() {
         <div className="container-page flex h-16 items-center gap-4">
           <div className="shrink-0"><Logo /></div>
           <nav aria-label="Main" className="ml-auto hidden items-center gap-1 md:flex">
-            {NAV.map((item) => <NavLink key={item.to} to={item.to} className={navClass}>{item.label}</NavLink>)}
-            <EditLink />
+            <NavLink to="/create" className={navClass}>Create</NavLink>
+            <NavLink to="/example" className={navClass}>Example</NavLink>
+            <AccountLinks />
           </nav>
           <button
             type="button"
@@ -72,16 +52,15 @@ export function Layout() {
         {menuOpen && (
           <nav id="mobile-nav" aria-label="Main" className="container-page flex flex-col gap-1 border-t border-line pb-3 md:hidden">
             <NavLink to="/" end className={(s) => `${navClass(s)} py-2 text-base`}>Home</NavLink>
-            {NAV.map((item) => (
-              <NavLink key={item.to} to={item.to} className={(s) => `${navClass(s)} py-2 text-base`}>{item.label}</NavLink>
-            ))}
-            <EditLink />
+            <NavLink to="/create" className={(s) => `${navClass(s)} py-2 text-base`}>Create</NavLink>
+            <NavLink to="/example" className={(s) => `${navClass(s)} py-2 text-base`}>Example</NavLink>
+            <AccountLinks mobile />
           </nav>
         )}
       </header>
 
       <main id="main" className="flex-1">
-        {portfolio.data ? <Outlet context={portfolio.data} /> : <PageSkeleton />}
+        <Outlet />
       </main>
 
       <footer className="no-print mt-20 border-t border-line bg-surface/60">
@@ -90,14 +69,14 @@ export function Layout() {
             <BrandMark className="w-14" />
             <div>
               <p className="display text-lg leading-tight"><span className="text-brand-navy">CivilEng</span> <em className="text-brand-italic">Portfolio</em></p>
-              <p className="text-muted">{cv ? `${cv.name}${cv.location ? ` · ${cv.location}` : ''}` : ' '}</p>
+              <p className="text-muted">Edmund, Ontario</p>
             </div>
           </div>
-          <div className="text-xs text-muted sm:text-right">
-            <p>© {new Date().getFullYear()} {cv?.name}</p>
+          <div className="max-w-md text-xs text-muted sm:text-right">
+            <p>Turn your résumé into a portfolio website.</p>
             <p className="mt-1">
-              Part of CivilEng, with <a className="link" href="https://civileng-researchhub.vercel.app" target="_blank" rel="noopener noreferrer">ResearchHub</a>.{' '}
-              <Link to="/sign-in" className="link">Owner sign-in</Link>
+              Part of CivilEng, with{' '}
+              <a className="link" href="https://civileng-researchhub.vercel.app" target="_blank" rel="noopener noreferrer">ResearchHub</a>.
             </p>
           </div>
         </div>
