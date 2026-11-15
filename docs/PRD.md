@@ -29,7 +29,10 @@ Returning owner ── opens site or link ──────┘
 1. **Home (`/`)** explains the product in one line and has one main action: *Upload your résumé*.
    An example portfolio is one tap away. Signed-in owners never see Home; they go straight to
    their portfolio.
-2. **Create (`/create`)**: upload a PDF or Word file, or paste text. "Start from scratch" is a
+2. **Create (`/create`)**: upload a PDF or Word file, or paste text, and/or paste a **LinkedIn
+   profile link** (one field under the upload card). With a résumé, the link fills only what
+   the résumé lacks (§ 3a). Alone, **Build from LinkedIn only** makes a starter portfolio from
+   the public profile; a tip says LinkedIn's *More → Save to PDF* gives the full profile. "Start from scratch" is a
    small secondary link. There are no checkboxes and no review screen. A spinner says what is
    happening ("Reading…", "Building your portfolio…").
 3. **Account, only if needed.** Not signed in: the résumé waits in the browser, and the person
@@ -51,6 +54,16 @@ Returning owner ── opens site or link ──────┘
 ### Navigation rules
 - Every page has a Back link (`BackLink`), the header, or a clear next button. Not-found and
   error pages offer *Home* or *Try again*.
+- **Phones (under 768 px)** get a fixed bottom tab bar instead of a menu: signed out Home ·
+  Example · Create · Sign in; signed in My portfolio · Edit · Upload · Account. Shared
+  portfolios have their own tabs: About · Experience · Projects · Skills · Contact (only the
+  sections that have content).
+- **Shared portfolios (`/p/<address>`, `/example`) stand alone.** No platform header, footer,
+  logo, menu or name. The visitor sees only the person: their initials/photo and name at the
+  top, their sections, and a footer with their name and email. The browser tab shows
+  "Section · Name" and the person's initials as the icon. Link previews (WhatsApp, LinkedIn,
+  Slack…) show the person's name, headline, summary and photo, via `api/portfolio-page.ts`
+  (§ 3b). The owner bar and success banners appear only to the signed-in owner.
 - Header, signed out: Example · Sign in · **Create portfolio**. Signed in: My portfolio (`/me`) ·
   Account.
 - `/me` always leads to your own portfolio, or to Create if you have none.
@@ -88,6 +101,24 @@ saving.
 - Safety: only public http(s) addresses. Private and internal networks are refused, including
   after redirects. Timeouts and size limits apply. See `docs/QAP.md` § Security.
 
+### 3a. LinkedIn profile link, and résumé + link together
+- LinkedIn does not let other sites read full profiles. The public preview gives name, headline,
+  current company, school, location, a short summary and the photo. `src/features/import/
+  linkedin.ts` turns that into a portfolio (`cvFromLinkedIn`).
+- **No contradictions: the résumé wins.** `mergeProfiles(resume, linkedIn)` keeps everything
+  from the résumé and only fills gaps: name, photo, headline, location, summary when missing,
+  companies and schools not already listed, and the LinkedIn link (added first).
+- If the link cannot be read, the résumé still builds the portfolio and a note says so.
+- A LinkedIn "Save to PDF" file is read like any résumé (Top Skills, Honors-Awards,
+  "Page x of y", Company/Role/date layout).
+- A pasted link is recorded in the upload history with source `link` (§ 7).
+
+### 3b. What visitors never see
+- Developer things: links labelled or pointing at an API, endpoint, Swagger, GraphQL, OpenAPI or
+  webhook are dropped when reading a résumé and hidden on public pages (`isTechnicalLink`).
+- Project cards are compact: two per row from 640 px, smaller titles, readable 14 px text,
+  long descriptions folded behind **Read more** (full text when printing).
+
 ## 4. Reading résumés (no AI)
 
 `src/features/import`: PDF (pdf.js, with layout: left-column headings, wrapped and side-by-side
@@ -101,6 +132,7 @@ the public page (people can add a public phone in the editor).
   with `slug` (unique, 3–40 characters `a-z0-9-`) and `published`. RLS: owners can do everything
   to their own row; visitors can read only the public columns of published rows.
 - `pf_resume_uploads` and the `pf-resumes` Storage bucket: the private upload history (§ 7).
+  `source` is `file`, `paste` or `link` (a pasted profile link; no file).
 - Portfolio fields include `photo`, `experience[].logo`, `education[].logo`, `projects[].image`
   and `certifications[].url`. These are image and page links, cleaned by `normalizeCv` (only
   https images, only http(s)/mailto links).

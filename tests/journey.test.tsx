@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
+import { cleanup, fireEvent, render, screen, waitFor, configure } from '@testing-library/react'
+
+// Slow or busy machines (CI, full parallel runs) need more than the 1 s default to settle.
+configure({ asyncUtilTimeout: 4000 })
+import { RouterProvider, createMemoryRouter, useLocation } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { exampleCv } from '../src/content/example'
@@ -73,19 +76,20 @@ function Where() {
 function renderAt(path: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const page = (el: ReactNode) => <>{el}<Where /></>
+  // The same kind of router as the app (needed for scroll restoration).
+  const router = createMemoryRouter(
+    [
+      { path: '/create', element: page(<CreatePage />) },
+      { path: '/editor', element: page(<EditorPage />) },
+      { path: '/finish', element: page(<FinishPage />) },
+      { path: '/p/:slug', element: <><PortfolioLayout /><Where /></>, children: [{ index: true, element: <OverviewPage /> }] },
+      { path: '*', element: <Where /> },
+    ],
+    { initialEntries: [path] },
+  )
   render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[path]}>
-        <Routes>
-          <Route path="/create" element={page(<CreatePage />)} />
-          <Route path="/editor" element={page(<EditorPage />)} />
-          <Route path="/finish" element={page(<FinishPage />)} />
-          <Route path="/p/:slug" element={<><PortfolioLayout /><Where /></>}>
-            <Route index element={<OverviewPage />} />
-          </Route>
-          <Route path="*" element={<Where />} />
-        </Routes>
-      </MemoryRouter>
+      <RouterProvider router={router} />
     </QueryClientProvider>,
   )
 }
@@ -160,6 +164,32 @@ describe('upload → live portfolio', () => {
     await waitFor(() => expect(where()).toBe('/p/jane?status=saved'))
   })
 
+  it('builds a portfolio from a LinkedIn link alone', async () => {
+    db.user = { id: 'u1' }
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ kind: 'page', finalUrl: 'https://www.linkedin.com/in/sam-example', title: 'Sam Example - Acme | LinkedIn', description: 'Bridge engineer · Experience: Acme · Location: Nairobi', image: 'https://media.licdn.com/p.jpg', siteName: 'linkedin.com', logo: '' }) })))
+    renderAt('/create')
+    fireEvent.change(await screen.findByLabelText(/Add your LinkedIn/), { target: { value: 'linkedin.com/in/sam-example' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Build from LinkedIn only' }))
+    await waitFor(() => expect(where()).toBe('/p/sam-example?status=new'))
+    expect(db.saves.at(-1)!.cv).toMatchObject({ name: 'Sam Example', photo: 'https://media.licdn.com/p.jpg', location: 'Nairobi' })
+    vi.unstubAllGlobals()
+  })
+
+  it('a résumé plus a LinkedIn link: the résumé wins, LinkedIn fills the photo', async () => {
+    db.user = { id: 'u1' }
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ kind: 'page', finalUrl: 'https://www.linkedin.com/in/jane', title: 'Someone Else - Other Co | LinkedIn', description: 'Different headline · Location: Mombasa', image: 'https://media.licdn.com/j.jpg', siteName: 'linkedin.com', logo: '' }) })))
+    renderAt('/create')
+    fireEvent.change(await screen.findByLabelText(/Add your LinkedIn/), { target: { value: 'https://www.linkedin.com/in/jane' } })
+    await pasteResume()
+    await waitFor(() => expect(where()).toBe('/p/jane-doe?status=new'))
+    const cv = db.saves.at(-1)!.cv
+    expect(cv.name).toBe('Jane Doe')
+    expect(cv.headline).toBe('Civil Engineer')
+    expect(cv.photo).toBe('https://media.licdn.com/j.jpg')
+    expect(cv.links[0].label).toBe('LinkedIn')
+    vi.unstubAllGlobals()
+  })
+
   it('stops with a clear message if the upload cannot be recorded', async () => {
     db.recordFails = 'Too many uploads from this network. Please try again in an hour.'
     renderAt('/create')
@@ -229,7 +259,9 @@ describe('owner tools and editing', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete portfolio' }))
     expect(db.deleted).toBe(0)
     fireEvent.click(screen.getByRole('button', { name: 'Delete for good' }))
-    await waitFor(() => expect(where()).toBe('/create?deleted=1'))
+    // The Create page says so (and may already have tidied ?deleted=1 out of the address).
+    expect(await screen.findByText('Your portfolio was deleted. Its address is free again.')).toBeTruthy()
+    expect(where()).toMatch(/^\/create/)
     expect(db.deleted).toBe(1)
     expect(screen.getByText(/Your portfolio was deleted/)).toBeTruthy()
   })

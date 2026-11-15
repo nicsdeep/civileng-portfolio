@@ -1,5 +1,5 @@
 import { usePortfolio } from '../../app/PortfolioLayout'
-import { usePageTitle } from '../../lib/usePageTitle'
+import { usePersonHead } from '../../lib/usePageTitle'
 import { Bullets, PageHeading, SectionTitle } from '../../components/ui'
 import { dateRange } from '../../content/normalize'
 import { WebImage } from '../../features/links/LinkFields'
@@ -10,7 +10,7 @@ function Logo({ src }: { src: string }) {
 
 export function ExperiencePage() {
   const { cv } = usePortfolio()
-  usePageTitle('Experience', cv.name)
+  usePersonHead(cv.name, 'Experience')
 
   return (
     <div className="container-page max-w-4xl py-10">

@@ -99,7 +99,7 @@ export function pdfItemsToText(pages: PdfItem[][]): string {
       headingIndex = out.length - 1
     }
 
-    for (const segments of groupLines(items.filter((i) => i.text.trim()))) {
+    for (const segments of splitColumns(items.filter((i) => i.text.trim()), body).flatMap(groupLines)) {
       const first = segments[0]
       const short = first.text.split(/\s+/).length <= 4 && !/[.:;,]$/.test(first.text)
       const large = first.size > body * 1.12
@@ -145,6 +145,27 @@ export function pdfItemsToText(pages: PdfItem[][]): string {
 }
 
 const isBulletText = (text: string) => /^[•▪●◦‣∙·*]/.test(text)
+
+/**
+ * Two-column pages (e.g. LinkedIn's "Save to PDF": a sidebar with contact,
+ * skills and languages beside the main column) are read main column first,
+ * then the sidebar. Pages with only headings in a left margin stay as one.
+ */
+function splitColumns(items: PdfItem[], body: number): PdfItem[][] {
+  if (items.length < 12) return [items]
+  const width = Math.max(...items.map((i) => i.x + i.width))
+  // The main column starts at the most common left edge right of the first quarter.
+  const counts = new Map<number, number>()
+  for (const i of items) if (i.x > width * 0.22) counts.set(Math.round(i.x), (counts.get(Math.round(i.x)) ?? 0) + 1)
+  const mainLeft = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0]
+  if (mainLeft === undefined) return [items]
+  // A real sidebar ends well before the main column (bullet symbols right next to text do not count).
+  const side = items.filter((i) => i.x + i.width < mainLeft - body * 2)
+  const sideRows = new Set(side.filter((i) => i.size <= body * 1.12 && /\p{L}{2,}/u.test(i.text)).map((i) => Math.round(i.y)))
+  if (sideRows.size < 5) return [items]
+  const main = items.filter((i) => !side.includes(i))
+  return [main, side]
+}
 
 function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b)

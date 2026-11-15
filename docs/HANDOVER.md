@@ -14,6 +14,47 @@ Use this template:
 
 ---
 
+## 2026-11-15: LinkedIn import, person-only shared portfolios, bottom tabs, compact projects
+- **What and why:** the owner asked for portfolios from a LinkedIn link (alone or with a résumé,
+  with no contradictions), shared links that show only the person (no platform branding),
+  phone-first bottom navigation, compact project details, and no developer things like APIs.
+  - **LinkedIn:** a link field on Create. With a résumé, the résumé wins and the link only fills
+    gaps (`mergeProfiles`). Alone, "Build from LinkedIn only" uses the public profile preview.
+    LinkedIn "Save to PDF" files now read well (main/sidebar columns, Top Skills, Honors-Awards,
+    Company/Role/duration layout, "Page x of y" footers, school/degree order).
+  - **Shared portfolios stand alone:** `/p/:slug` and `/example` moved outside the site layout.
+    Own header (initials/photo + name), own footer (name + email), section tabs at the bottom on
+    phones. Tab title and favicon become the person's (`usePersonHead`).
+  - **Link previews per person:** `api/portfolio-page.ts` serves `/p/*` (via `vercel.json`) with
+    the person's title, description, og/twitter tags, photo and initials icon. It falls back to
+    the plain page on any problem.
+  - **Site bottom tabs** on phones replace the Menu button.
+  - **Compact project cards** (two columns from 640 px, smaller titles, 14 px text, Read more).
+  - **No developer links:** `isTechnicalLink` drops API/endpoint/Swagger/GraphQL/webhook links
+    when reading and on display.
+  - **Bug fixed:** after deleting a portfolio, the editor's "no portfolio" guard could redirect
+    first and swallow the "Your portfolio was deleted" notice. The outer editor now owns a
+    `deleted` flag. A journey test caught this once the tests used the app's data router.
+  - **Privacy Policy** now also names profile links (LinkedIn) among what is recorded.
+- **Files:** `src/features/import/{linkedin,parse,extract,history}.ts`, `src/content/normalize.ts`,
+  `src/components/{BottomNav,icons,ui}.tsx`, `src/app/{router,Layout,PortfolioLayout}.tsx`,
+  `src/lib/usePageTitle.ts`, `src/pages/{CreatePage,EditorPage,PrivacyPage}.tsx`,
+  `src/pages/portfolio/*`, `api/portfolio-page.ts`, `api/_lib/portfolio-head.ts`, `vercel.json`,
+  `supabase/migrations/20261115120000_pf_uploads_from_links.sql` (allows `source = 'link'`),
+  `supabase/tests/rls_test.sql` (17b), `.github/workflows/ci.yml`, tests
+  `linkedin.test.ts`, `portfolio-head.test.ts`, `journey.test.tsx` (now uses a data router,
+  async timeout 4 s for busy machines).
+- **Tested:** see the PR for gate results (lint, 67 unit/journey tests, build, RLS). Browser check
+  at 390 px and 1280 px on `/example`, `/example/projects`, `/create` and an unknown address: no
+  sideways scrolling, no platform name on shared pages, tabs shown only on phones.
+- **Unfinished / known issues:** LinkedIn-only portfolios are thin (LinkedIn shares little); the
+  PDF route is the full one. Preview deployments behind Vercel protection may fall back to the
+  plain page for link previews; production is unaffected.
+- **Next step:** after merge, open a real `/p/<address>` link in a WhatsApp/LinkedIn preview
+  checker and confirm the person's name and photo show. Owner to-dos still open: add
+  `https://civileng-portfolio.vercel.app/**` to ResearchHub's Supabase redirect URLs, reset the
+  old database password, and test a real sign-up.
+
 ## 2026-11-15: One-step journey, paste-a-link everywhere, project doctrines
 - **What and why:** the owner asked for a short, friendly journey (first principles), success
   states, no lost users and no overlap. Changes:

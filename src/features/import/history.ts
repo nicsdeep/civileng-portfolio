@@ -38,8 +38,10 @@ export async function recordUpload(input: {
   file?: File
   consentAt: Date
   signedIn: boolean
+  /** A pasted profile link (e.g. LinkedIn) rather than a résumé. */
+  fromLink?: boolean
 }): Promise<RecordedUpload> {
-  const { result, text, file, consentAt, signedIn } = input
+  const { result, text, file, consentAt, signedIn, fromLink } = input
   const id = crypto.randomUUID()
   const claimToken = signedIn ? null : randomHex(32)
   const ext = file?.name.toLowerCase().match(/\.(pdf|docx|txt)$/)?.[1] ?? null
@@ -47,7 +49,7 @@ export async function recordUpload(input: {
 
   const { error } = await supabase.from('pf_resume_uploads').insert({
     id,
-    source: file ? 'file' : 'paste',
+    source: file ? 'file' : fromLink ? 'link' : 'paste',
     consent_at: consentAt.toISOString(),
     file_name: file ? file.name.slice(0, 255) : null,
     file_type: ext ? MIME[ext] : null,

@@ -1,12 +1,14 @@
 import { useState } from 'react'
-import { Link, NavLink, Outlet, useOutletContext, useParams, useSearchParams } from 'react-router'
+import { Link, NavLink, Outlet, ScrollRestoration, useOutletContext, useParams, useSearchParams } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { saveMyPortfolio, type PublicPortfolio } from '../features/portfolio/api'
 import { useMyPortfolio, usePortfolioBySlug } from '../features/portfolio/hooks'
 import { forgetPrevious, loadPrevious } from '../features/portfolio/publish'
 import { exampleCv } from '../content/example'
 import { StatusMessage } from '../components/ui'
-import { usePageTitle } from '../lib/usePageTitle'
+import { BottomNav, type BottomItem } from '../components/BottomNav'
+import { Icons } from '../components/icons'
+import { WebImage } from '../features/links/LinkFields'
 import { useAuth } from '../features/auth/AuthProvider'
 
 /** The portfolio being shown, for the pages inside a PortfolioLayout. */
@@ -120,6 +122,21 @@ function OwnerBar({ portfolio, slug }: { portfolio: PublicPortfolio; slug: strin
   )
 }
 
+function Avatar({ cv, className }: { cv: PublicPortfolio['cv']; className: string }) {
+  const initials = cv.name.split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
+  return (
+    <span className={`relative inline-grid shrink-0 place-items-center overflow-hidden rounded-full bg-brand-navy font-serif text-white ${className}`}>
+      <span aria-hidden="true">{initials}</span>
+      {cv.photo && <WebImage src={cv.photo} alt="" className="absolute inset-0 size-full object-cover" />}
+    </span>
+  )
+}
+
+/**
+ * What a visitor of a shared link sees: only the person's portfolio, with
+ * their name on top, the sections (bottom tab bar on phones) and nothing
+ * about the platform. Owners also get their success banner and owner bar.
+ */
 function PortfolioFrame({ portfolio, example = false, slug }: { portfolio: PublicPortfolio; example?: boolean; slug?: string }) {
   const base = portfolio.basePath
   const { cv } = portfolio
@@ -130,26 +147,45 @@ function PortfolioFrame({ portfolio, example = false, slug }: { portfolio: Publi
     projects: cv.projects.length > 0,
     skills: cv.skills.length + cv.certifications.length + cv.interests.length > 0,
   }
+  const sections: BottomItem[] = [
+    { to: base, label: 'About', icon: Icons.person, end: true },
+    ...(has.experience ? [{ to: `${base}/experience`, label: 'Experience', icon: Icons.briefcase }] : []),
+    ...(has.projects ? [{ to: `${base}/projects`, label: 'Projects', icon: Icons.grid }] : []),
+    ...(has.skills ? [{ to: `${base}/skills`, label: 'Skills', icon: Icons.star }] : []),
+    { to: `${base}/contact`, label: 'Contact', icon: Icons.mail },
+  ]
   return (
-    <>
+    <div className="flex min-h-dvh flex-col">
       {example && (
         <p className="no-print border-b border-line bg-accent-soft px-4 py-2 text-center text-sm">
-          This is an example with a made-up person. <Link to="/create" className="link font-semibold">Create yours from your résumé →</Link>
+          Example with a made-up person. <Link to="/create" className="link font-semibold">Create yours →</Link>
         </p>
       )}
       {slug && isOwner && <StatusBanner portfolio={portfolio} slug={slug} />}
       {slug && isOwner && <OwnerBar portfolio={portfolio} slug={slug} />}
-      <nav aria-label="Portfolio" className="no-print border-b border-line">
-        <div className="container-page flex items-center gap-1 overflow-x-auto py-2">
-          <NavLink to={base} end className={navClass}>Overview</NavLink>
-          {has.experience && <NavLink to={`${base}/experience`} className={navClass}>Experience</NavLink>}
-          {has.projects && <NavLink to={`${base}/projects`} className={navClass}>Projects</NavLink>}
-          {has.skills && <NavLink to={`${base}/skills`} className={navClass}>Skills</NavLink>}
-          <NavLink to={`${base}/contact`} className={navClass}>Contact</NavLink>
+      <header className="no-print sticky top-0 z-20 border-b border-line bg-bg/90 backdrop-blur">
+        <div className="container-page flex h-14 items-center gap-3">
+          <Link to={base} className="flex min-w-0 items-center gap-2.5">
+            <Avatar cv={cv} className="size-8 text-sm" />
+            <span className="display truncate text-xl leading-none">{cv.name}</span>
+          </Link>
+          <nav aria-label="Sections" className="ml-auto hidden items-center gap-1 md:flex">
+            {sections.map((s) => (
+              <NavLink key={s.to} to={s.to} end={s.end} className={navClass}>{s.label}</NavLink>
+            ))}
+          </nav>
         </div>
-      </nav>
-      <Outlet context={portfolio} />
-    </>
+      </header>
+      <main className="flex-1 pb-20 md:pb-0">
+        <Outlet context={portfolio} />
+      </main>
+      <footer className="no-print border-t border-line py-6 pb-24 text-center text-xs text-muted md:pb-6">
+        © {new Date().getFullYear()} {cv.name}
+        {cv.email && <> · <a href={`mailto:${cv.email}`} className="link">{cv.email}</a></>}
+      </footer>
+      <BottomNav items={sections} label="Sections" />
+      <ScrollRestoration />
+    </div>
   )
 }
 
@@ -171,12 +207,11 @@ export function PortfolioLayout() {
   const { slug = '' } = useParams()
   const lower = slug.toLowerCase()
   const query = usePortfolioBySlug(lower)
-  usePageTitle(query.data?.cv.name)
 
   if (query.isPending) return <Skeleton />
   if (query.isError) {
     return (
-      <div className="container-page py-12">
+      <div className="container-page py-16">
         <StatusMessage title="This portfolio could not be loaded." tone="error" action={<button className="btn-secondary" onClick={() => query.refetch()}>Try again</button>}>
           Check your connection and try again.
         </StatusMessage>
@@ -185,7 +220,7 @@ export function PortfolioLayout() {
   }
   if (!query.data) {
     return (
-      <div className="container-page py-12">
+      <div className="container-page py-16">
         <h1 className="display text-5xl">Portfolio <em className="text-brand-italic">not found.</em></h1>
         <p className="mt-3 text-muted">There is no portfolio at this address. It may have been renamed or hidden.</p>
         <div className="mt-6 flex flex-wrap gap-3">
@@ -202,6 +237,5 @@ const example: PublicPortfolio = { cv: exampleCv, basePath: '/example', updatedA
 
 /** /example — the made-up portfolio that shows what visitors will get. */
 export function ExampleLayout() {
-  usePageTitle('Example')
   return <PortfolioFrame portfolio={example} example />
 }

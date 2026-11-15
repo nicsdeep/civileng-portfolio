@@ -56,3 +56,4 @@ jobs:
           grep -q 'Too many uploads from this network' rls.log
           grep -A2 'anon_reads_files' rls.log | grep -qE '^ +0$'
           grep -A2 'uploads_kept' rls.log | grep -qE '^ +2 \| +0$'
+          grep -A2 'link_records' rls.log | grep -qE '^ +1$'

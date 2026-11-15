@@ -84,6 +84,10 @@ select set_config('request.headers', '{"x-forwarded-for": "198.51.100.9"}', fals
 insert into public.pf_resume_uploads (id, source, consent_at, parsed)
   select gen_random_uuid(), 'paste', now(), '{}' from generate_series(1, 10);
 insert into public.pf_resume_uploads (id, source, consent_at, parsed) values (:'U3', 'paste', now(), '{}');
+\echo '17b. A record from a pasted LinkedIn link (no file) is accepted'
+select set_config('request.headers', '{"x-forwarded-for": "198.51.100.77"}', false);
+insert into public.pf_resume_uploads (id, source, consent_at, parsed, raw_text) values (gen_random_uuid(), 'link', now(), '{"name": "Link Person"}', 'https://www.linkedin.com/in/link-person');
+reset role; select count(*) as link_records from public.pf_resume_uploads where source = 'link'; set role anon;
 \echo '18. History as the site owner sees it (superuser)'
 reset role;
 select name, phone, source, user_id = :'B' as linked_to_b, ip_hash is not null as has_ip_hash, ip_hash <> '203.0.113.7' as ip_not_stored, claim_token_hash is null as token_cleared

@@ -1,5 +1,5 @@
 import { emptyCv } from '../../content/cv'
-import { normalizeCv } from '../../content/normalize'
+import { isTechnicalLink, normalizeCv } from '../../content/normalize'
 import type { Certification, Cv, Education, Experience, Link, Project, SkillGroup, Testimonial } from '../../content/types'
 
 /*
@@ -33,11 +33,13 @@ const HEADINGS: Record<SectionKey, string[]> = {
   ],
   education: ['education', 'academic background', 'academic qualifications', 'qualifications', 'education and training', 'academics'],
   skills: [
+    'top skills',
     'skills', 'key skills', 'technical skills', 'core skills', 'core competencies', 'competencies', 'skills and abilities',
     'areas of expertise', 'expertise', 'software', 'tools', 'technologies', 'software skills', 'skills summary',
   ],
   projects: ['projects', 'key projects', 'selected projects', 'academic projects', 'personal projects', 'project experience', 'portfolio', 'research', 'research projects', 'publications'],
   certifications: [
+    'honors awards', 'honorsawards',
     'certifications', 'certificates', 'certification', 'licenses', 'licences', 'licenses and certifications',
     'licences and certifications', 'certifications and licenses', 'certifications and licences', 'awards', 'honors', 'honours',
     'awards and honors', 'awards and honours', 'achievements', 'accomplishments', 'professional development', 'training', 'courses',
@@ -154,7 +156,8 @@ function findLinks(text: string): Link[] {
   for (const match of text.matchAll(URL_RE)) {
     if (EMAIL_RE.test(match[0])) continue
     const before = text.slice(Math.max(0, (match.index ?? 0) - 60), match.index).split(/[|•\n]/).pop() ?? ''
-    links.push({ label: labelForUrl(match[0], before), url: normalizeUrl(match[0]) })
+    const link = { label: labelForUrl(match[0], before), url: normalizeUrl(match[0]) }
+    if (!isTechnicalLink(link)) links.push(link)
   }
   return links
 }
@@ -314,19 +317,68 @@ function parseRoleHeader(header: string[]): { title: string; org: string; locati
   return { title, org, location, start, end, extra }
 }
 
+// LinkedIn lists "Company / Role / January 2020 - Present (4 years 11 months) / Place / text".
+const DURATION_RE = /\(\s*(?:less than a year|\d+\s+(?:years?|yrs?|months?|mos?)(?:\s+\d+\s+(?:months?|mos?))?)\s*\)/i
+const DURATION_ONLY_RE = /^(?:\d+\s+(?:years?|yrs?)\s*)?(?:\d+\s+(?:months?|mos?))?$/i
+const isLinkedInDate = (line: string) => DURATION_RE.test(line) && takeDates(line.replace(DURATION_RE, '')).found
+
+function parseLinkedInExperience(lines: string[]): Experience[] {
+  const list = lines.filter(Boolean).map(stripBullet)
+  const dates = list.map((l, i) => (isLinkedInDate(l) ? i : -1)).filter((i) => i >= 0)
+  const out: Experience[] = []
+  let company = ''
+  dates.forEach((d, k) => {
+    const prev = k > 0 ? dates[k - 1] : -1
+    const role = list[d - 1] ?? ''
+    // A new company line sits two lines above the date, unless roles share one company.
+    let c = d - 2
+    if (c >= 0 && DURATION_ONLY_RE.test(list[c]) && list[c]) c--
+    if (c > prev + 1 || (k === 0 && c >= 0)) company = list[c]
+    const end = k + 1 < dates.length ? dates[k + 1] - 2 : list.length
+    const body = list.slice(d + 1, Math.max(d + 1, end)).filter((l) => !DURATION_ONLY_RE.test(l))
+    let location = ''
+    if (body[0] && body[0].split(/\s+/).length <= 6 && !/[.!?]$/.test(body[0]) && (/,/.test(body[0]) || LOCATION_HINT.test(body[0]))) location = body.shift()!
+    const { start, end: finish } = takeDates(list[d].replace(DURATION_RE, ''))
+    out.push({ role: tidy(role), org: tidy(company), logo: '', location, start, end: finish, bullets: paragraphs(body) })
+  })
+  return out
+}
+
+/** Joins wrapped lines into paragraphs; lines that start with a bullet stay separate. */
+function paragraphs(lines: string[]): string[] {
+  const out: string[] = []
+  for (const line of lines) {
+    if (out.length && !isBullet(line) && !/[.!?:]$/.test(out[out.length - 1])) out[out.length - 1] += ` ${line}`
+    else out.push(stripBullet(line))
+  }
+  return out.map(tidy).filter(Boolean)
+}
+
 function parseExperience(lines: string[]): Experience[] {
+  if (lines.some(isLinkedInDate)) return parseLinkedInExperience(lines)
   return entries(lines).map((e) => {
     const h = parseRoleHeader(e.header)
     return { role: h.title, org: h.org, logo: '', location: h.location, start: h.start, end: h.end, bullets: [...h.extra, ...e.bullets] }
   })
 }
 
+const INSTITUTION_RE = /\b(university|college|institute|school|polytechnic|academy|universit[éy]|TVET|seminary)\b/i
+
 function parseEducation(lines: string[]): Education[] {
   return entries(lines).map((e) => {
+    // "University of X" first, then "Degree, Field · (2016 - 2020)" (LinkedIn and many CVs).
+    const secondHasText = e.header.length >= 2 && /\p{L}{3,}/u.test(takeDates(e.header[1]).rest)
+    if (secondHasText && INSTITUTION_RE.test(e.header[0]) && !INSTITUTION_RE.test(e.header[1]) && !e.header[0].includes(',')) {
+      const dates = takeDates(e.header.slice(1).join(' '))
+      const degree = tidy(dates.rest.replace(/[·•]\s*\(\s*\)|\(\s*\)|[·•]\s*$/g, ''))
+      return { degree, school: tidy(e.header[0]), logo: '', location: '', dates: dates.end ? `${dates.start} – ${dates.end}` : dates.start, bullets: e.bullets }
+    }
     const h = parseRoleHeader(e.header)
-    const degree = tidy(h.title.replace(/\bexpected(?:\s+graduation)?\b/i, ''))
+    let degree = tidy(h.title.replace(/\bexpected(?:\s+graduation)?\b/i, ''))
+    let school = h.org
+    if (INSTITUTION_RE.test(degree) && school && !INSTITUTION_RE.test(school)) [degree, school] = [school, degree]
     const dates = h.end ? `${h.start} – ${h.end}` : h.start
-    return { degree, school: h.org, logo: '', location: h.location, dates, bullets: [...h.extra, ...e.bullets] }
+    return { degree, school, logo: '', location: h.location, dates, bullets: [...h.extra, ...e.bullets] }
   })
 }
 
@@ -458,7 +510,9 @@ export function parseResume(text: string): ParseResult {
       .split('\n')
       .map((l) => l.replace(/[ \t]+$/g, '').replace(/^\s+/, '').replace(/\s{3,}/g, '  '))
       // Hidden tracking codes some résumé builders add, e.g. "#HRJ#6fe7…#".
-      .filter((l) => !/^#[A-Z]{2,}#/.test(l)),
+      .filter((l) => !/^#[A-Z]{2,}#/.test(l))
+      // Page footers such as LinkedIn's "Page 1 of 3".
+      .filter((l) => !/^page \d+ of \d+$/i.test(l)),
   )
   const blocks = splitSections(lines)
   const header = blocks[0].lines.filter(Boolean)
