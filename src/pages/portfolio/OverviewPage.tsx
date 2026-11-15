@@ -1,7 +1,8 @@
 import { Link } from 'react-router'
 import { usePortfolio } from '../../app/PortfolioLayout'
 import { usePageTitle } from '../../lib/usePageTitle'
-import { Chips, ExternalLinks, SectionTitle } from '../../components/ui'
+import { Chips, ExternalLinks, HostedLink, SectionTitle } from '../../components/ui'
+import { WebImage } from '../../features/links/LinkFields'
 import { dateRange } from '../../content/normalize'
 
 /** "Jane Wanjiru Doe" → ["Jane Wanjiru", "Doe"], for the italic accent. */
@@ -21,6 +22,9 @@ export function OverviewPage() {
   return (
     <div className="container-page">
       <section className="py-14 sm:py-20" aria-labelledby="intro">
+        {cv.photo && (
+          <WebImage src={cv.photo} alt={cv.name} className="mb-6 size-24 rounded-full border border-line object-cover sm:size-28" />
+        )}
         {cv.status && <p className="eyebrow">{cv.status}</p>}
         <h1 id="intro" className="display mt-3 text-6xl leading-[0.95] sm:text-8xl">
           {first} <em className="text-brand-italic">{last}</em>
@@ -46,12 +50,15 @@ export function OverviewPage() {
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             {featured.map((p) => (
-              <article key={p.title} className="panel flex flex-col p-5">
+              <article key={p.title} className="panel flex flex-col overflow-hidden">
+                <WebImage src={p.image} alt="" className="aspect-video w-full border-b border-line object-cover" />
+                <div className="flex flex-1 flex-col p-5">
                 <h3 className="display text-2xl">{p.title}</h3>
                 {p.subtitle && <p className="text-sm text-muted">{p.subtitle}</p>}
                 <p className="mt-3 line-clamp-5 flex-1 text-sm">{p.description}</p>
                 <div className="mt-4"><Chips items={p.tech.slice(0, 5)} label={`${p.title} technologies`} /></div>
-                <ExternalLinks links={p.links.slice(0, 2)} className="mt-3" />
+                <HostedLink link={p.links[0]} className="mt-3" />
+                </div>
               </article>
             ))}
           </div>

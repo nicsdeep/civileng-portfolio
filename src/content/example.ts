@@ -6,6 +6,7 @@ import type { Cv } from './types'
  */
 export const exampleCv: Cv = {
   name: 'Amara Lindqvist',
+  photo: '',
   headline: 'Structural engineer (EIT)',
   location: 'Edmund, Ontario',
   status: 'Example portfolio · open to structural design roles',
@@ -28,6 +29,7 @@ export const exampleCv: Cv = {
     {
       role: 'Structural Engineer-in-Training',
       org: 'Northbridge Consulting Engineers',
+      logo: '',
       location: 'Edmund, Ontario',
       start: '2023',
       end: '',
@@ -40,6 +42,7 @@ export const exampleCv: Cv = {
     {
       role: 'Engineering Intern',
       org: 'Lakeshore Municipality, Infrastructure Services',
+      logo: '',
       location: 'Ontario',
       start: '05/2021',
       end: '08/2022',
@@ -53,6 +56,7 @@ export const exampleCv: Cv = {
     {
       degree: 'BASc, Civil Engineering (Structural option)',
       school: 'University of the Great Lakes',
+      logo: '',
       location: 'Ontario',
       dates: '2018 – 2022',
       bullets: ['Capstone: timber pedestrian bridge, winner of the faculty design award.', 'Steel Bridge team, design lead.'],
@@ -65,6 +69,7 @@ export const exampleCv: Cv = {
       description:
         'A 32 m glulam timber footbridge designed for pedestrians and maintenance vehicles, with vibration checks, ' +
         'connection design and a construction-staging plan. Embodied carbon was 35% lower than the steel option.',
+      image: '',
       tech: ['Timber design', 'SAP2000', 'Revit'],
       links: [],
       featured: true,
@@ -73,6 +78,7 @@ export const exampleCv: Cv = {
       title: 'Bridge load-rating toolkit',
       subtitle: 'Internal tool',
       description: 'Python scripts that turn inspection data and analysis results into consistent load-rating tables and charts for reports.',
+      image: '',
       tech: ['Python', 'Excel'],
       links: [],
       featured: true,
@@ -81,14 +87,15 @@ export const exampleCv: Cv = {
       title: 'Mid-rise retrofit study',
       subtitle: 'Seismic assessment',
       description: 'Compared three retrofit schemes for a 1970s concrete building and recommended the option with the least disruption to tenants.',
+      image: '',
       tech: ['ETABS', 'Seismic design'],
       links: [],
       featured: true,
     },
   ],
   certifications: [
-    { name: 'Engineer-in-Training (EIT)', issuer: 'Professional Engineers Ontario', date: '2023' },
-    { name: 'Working at Heights', issuer: 'Ontario Ministry of Labour', date: '2022' },
+    { name: 'Engineer-in-Training (EIT)', issuer: 'Professional Engineers Ontario', date: '2023', url: '' },
+    { name: 'Working at Heights', issuer: 'Ontario Ministry of Labour', date: '2022', url: '' },
   ],
   interests: ['Low-carbon structures', 'Bridge rehabilitation', 'Mentoring engineering students'],
   testimonials: [

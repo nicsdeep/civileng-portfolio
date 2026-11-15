@@ -317,7 +317,7 @@ function parseRoleHeader(header: string[]): { title: string; org: string; locati
 function parseExperience(lines: string[]): Experience[] {
   return entries(lines).map((e) => {
     const h = parseRoleHeader(e.header)
-    return { role: h.title, org: h.org, location: h.location, start: h.start, end: h.end, bullets: [...h.extra, ...e.bullets] }
+    return { role: h.title, org: h.org, logo: '', location: h.location, start: h.start, end: h.end, bullets: [...h.extra, ...e.bullets] }
   })
 }
 
@@ -326,7 +326,7 @@ function parseEducation(lines: string[]): Education[] {
     const h = parseRoleHeader(e.header)
     const degree = tidy(h.title.replace(/\bexpected(?:\s+graduation)?\b/i, ''))
     const dates = h.end ? `${h.start} – ${h.end}` : h.start
-    return { degree, school: h.org, location: h.location, dates, bullets: [...h.extra, ...e.bullets] }
+    return { degree, school: h.org, logo: '', location: h.location, dates, bullets: [...h.extra, ...e.bullets] }
   })
 }
 
@@ -380,7 +380,7 @@ function parseProjects(lines: string[], knownSkills: string[]): Project[] {
     const { title, subtitle } = splitTitle(p.title || 'Project')
     const description = removeLinks(joinParagraph(p.body))
     const tech = uniqueBy(skillPatterns.filter((s) => s.re.test(description)).map((s) => s.name), (s) => s).slice(0, 8)
-    return { title, subtitle, description, tech, links, featured: false }
+    return { title, subtitle, description, image: '', tech, links, featured: false }
   })
 }
 
@@ -402,7 +402,7 @@ function parseCertifications(lines: string[]): Certification[] {
       const body = dates.found ? dates.rest : text
       const [name, ...rest] = body.split(/\s+[–—]\s+|\s+-\s+/)
       const issuer = tidy(splitList(rest.join(' – '), /,/)[0] ?? '')
-      return { name: tidy(name), issuer, date: dates.found ? dates.start : '' }
+      return { name: tidy(name), issuer, date: dates.found ? dates.start : '', url: '' }
     })
 }
 

@@ -12,6 +12,7 @@ export function SignUpPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const next = safeNext(params.get('next'))
+  const publishing = next === '/finish'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -42,8 +43,8 @@ export function SignUpPage() {
     return (
       <AuthLayout title="Check your" accent="inbox.">
         <p>
-          We sent a confirmation link to <strong>{sentTo}</strong>. Open it to finish creating your account, then you
-          will be signed in automatically.
+          We sent a confirmation link to <strong>{sentTo}</strong>.{' '}
+          {publishing ? 'Open it and your portfolio goes live straight away.' : 'Open it to finish creating your account; you will be signed in automatically.'}
         </p>
         <p className="mt-3 text-sm text-muted">No email after a few minutes? Check spam, or try again with the same address.</p>
         <Link to="/sign-in" className="btn-secondary mt-6">Back to sign in</Link>
@@ -52,7 +53,11 @@ export function SignUpPage() {
   }
 
   return (
-    <AuthLayout title="Create your" accent="account." intro="One CivilEng account works on this portfolio and on ResearchHub.">
+    <AuthLayout
+      title={publishing ? 'One last' : 'Create your'}
+      accent={publishing ? 'step.' : 'account.'}
+      intro={publishing ? 'Your portfolio is ready. Create a free account to publish it and keep it yours.' : 'One CivilEng account works on this portfolio and on ResearchHub.'}
+    >
       <form onSubmit={onSubmit} className="space-y-4">
         <Field id="email" label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         <Field

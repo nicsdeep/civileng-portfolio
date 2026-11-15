@@ -70,8 +70,8 @@ describe('parseResume (plain text)', () => {
   it('reads the summary and experience', () => {
     expect(cv.summary).toBe('Civil engineer with three years of experience in road and drainage design. I like clear drawings.')
     expect(cv.experience).toEqual([
-      { role: 'Junior Civil Engineer', org: 'Acme Consulting Ltd', location: 'Toronto, Ontario', start: 'Jan 2022', end: '', bullets: ['Designed stormwater systems for 12 subdivisions', 'Prepared tender drawings in Civil 3D'] },
-      { role: 'Engineering Intern', org: 'City of Edmund', location: 'Edmund, Ontario', start: 'May 2020', end: 'Aug 2021', bullets: ['Inspected 40 culverts', 'Wrote inspection reports'] },
+      { role: 'Junior Civil Engineer', org: 'Acme Consulting Ltd', logo: '', location: 'Toronto, Ontario', start: 'Jan 2022', end: '', bullets: ['Designed stormwater systems for 12 subdivisions', 'Prepared tender drawings in Civil 3D'] },
+      { role: 'Engineering Intern', org: 'City of Edmund', logo: '', location: 'Edmund, Ontario', start: 'May 2020', end: 'Aug 2021', bullets: ['Inspected 40 culverts', 'Wrote inspection reports'] },
     ])
   })
 
@@ -87,14 +87,15 @@ describe('parseResume (plain text)', () => {
         title: 'Bridge Monitoring Dashboard',
         subtitle: 'Capstone',
         description: 'Built a dashboard showing sensor data from a pedestrian bridge using Python and Excel.',
+        image: '',
         tech: ['Python', 'Excel'],
         links: [{ label: 'Source', url: 'https://github.com/janedoe/bridge' }],
         featured: true,
       },
     ])
     expect(cv.certifications).toEqual([
-      { name: 'EIT', issuer: 'Professional Engineers Ontario', date: '2022' },
-      { name: 'First Aid', issuer: '', date: '2021' },
+      { name: 'EIT', issuer: 'Professional Engineers Ontario', date: '2022', url: '' },
+      { name: 'First Aid', issuer: '', date: '2021', url: '' },
     ])
     expect(skipped).toEqual(['REFERENCES'])
   })

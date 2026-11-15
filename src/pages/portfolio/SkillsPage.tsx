@@ -27,7 +27,11 @@ export function SkillsPage() {
             {cv.certifications.map((c) => (
               <li key={`${c.name}-${c.issuer}`} className="flex flex-col gap-0.5 px-5 py-3 sm:flex-row sm:items-baseline sm:justify-between">
                 <span>
-                  <span className="font-medium">{c.name}</span>
+                  {c.url ? (
+                    <a href={c.url} target="_blank" rel="noopener noreferrer" className="link font-medium">{c.name} <span aria-hidden="true">↗</span></a>
+                  ) : (
+                    <span className="font-medium">{c.name}</span>
+                  )}
                   {c.issuer && <span className="text-muted"> · {c.issuer}</span>}
                 </span>
                 {c.date && <span className="shrink-0 text-sm text-muted">{c.date}</span>}

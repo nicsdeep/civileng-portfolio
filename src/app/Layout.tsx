@@ -10,10 +10,17 @@ function AccountLinks({ mobile = false }: { mobile?: boolean }) {
   const { user, loading } = useAuth()
   const cls = (s: { isActive: boolean }) => `${navClass(s)} ${mobile ? 'py-2 text-base' : ''}`
   if (loading) return null
-  if (!user) return <NavLink to="/sign-in" className={mobile ? cls : 'btn-secondary ml-2 h-9 py-0'}>Sign in</NavLink>
+  if (!user) {
+    return (
+      <>
+        <NavLink to="/sign-in" className={cls}>Sign in</NavLink>
+        <NavLink to="/create" className={mobile ? cls : 'btn-primary ml-1 h-9 py-0'}>Create portfolio</NavLink>
+      </>
+    )
+  }
   return (
     <>
-      <NavLink to="/editor" className={cls}>My portfolio</NavLink>
+      <NavLink to="/me" className={cls}>My portfolio</NavLink>
       <NavLink to="/account" className={cls}>Account</NavLink>
     </>
   )
@@ -35,7 +42,6 @@ export function Layout() {
         <div className="container-page flex h-16 items-center gap-4">
           <div className="shrink-0"><Logo /></div>
           <nav aria-label="Main" className="ml-auto hidden items-center gap-1 md:flex">
-            <NavLink to="/create" className={navClass}>Create</NavLink>
             <NavLink to="/example" className={navClass}>Example</NavLink>
             <AccountLinks />
           </nav>
@@ -52,7 +58,6 @@ export function Layout() {
         {menuOpen && (
           <nav id="mobile-nav" aria-label="Main" className="container-page flex flex-col gap-1 border-t border-line pb-3 md:hidden">
             <NavLink to="/" end className={(s) => `${navClass(s)} py-2 text-base`}>Home</NavLink>
-            <NavLink to="/create" className={(s) => `${navClass(s)} py-2 text-base`}>Create</NavLink>
             <NavLink to="/example" className={(s) => `${navClass(s)} py-2 text-base`}>Example</NavLink>
             <AccountLinks mobile />
           </nav>

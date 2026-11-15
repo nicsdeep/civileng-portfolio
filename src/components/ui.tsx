@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import type { ReactNode } from 'react'
 import type { Link as CvLink } from '../content/types'
 
@@ -59,5 +60,39 @@ export function StatusMessage({ title, children, tone = 'neutral', action }: { t
       {children && <div className="mx-auto mt-2 max-w-md text-sm text-muted">{children}</div>}
       {action && <div className="mt-4">{action}</div>}
     </div>
+  )
+}
+
+/**
+ * "← Back": goes to the previous page in this site when there is one,
+ * otherwise to `fallback`, so nobody is ever stuck on a page.
+ */
+export function BackLink({ fallback = '/', label = 'Back', className = '' }: { fallback?: string; label?: string; className?: string }) {
+  const canGoBack = typeof window !== 'undefined' && (window.history.state?.idx ?? 0) > 0
+  return (
+    <Link
+      to={fallback}
+      className={`no-print inline-flex items-center gap-1 text-sm text-muted hover:text-ink ${className}`}
+      onClick={(e) => {
+        if (!canGoBack) return
+        e.preventDefault()
+        window.history.back()
+      }}
+    >
+      <span aria-hidden="true">←</span> {label}
+    </Link>
+  )
+}
+
+/** A project's live/hosted address, shown in full under the project so people can open it. */
+export function HostedLink({ link, className = '' }: { link?: CvLink; className?: string }) {
+  if (!link) return null
+  const shown = link.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
+  return (
+    <a href={link.url} target="_blank" rel="noopener noreferrer" className={`link inline-flex max-w-full items-center gap-1 text-sm font-medium ${className}`}>
+      <span aria-hidden="true">🔗</span>
+      <span className="truncate">{shown}</span>
+      <span className="sr-only">({link.label})</span>
+    </a>
   )
 }
