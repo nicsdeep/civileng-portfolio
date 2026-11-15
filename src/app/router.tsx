@@ -11,6 +11,7 @@ import { ContactPage } from '../pages/portfolio/ContactPage'
 import { EditorPage } from '../pages/EditorPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { PrivacyPage } from '../pages/PrivacyPage'
+import { FinishPage, MePage } from '../pages/FinishPage'
 import { SignInPage } from '../pages/auth/SignInPage'
 import { SignUpPage } from '../pages/auth/SignUpPage'
 import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage'
@@ -34,6 +35,8 @@ export const router = createBrowserRouter([
       { path: '/create', element: <CreatePage /> },
       { path: '/example', element: <ExampleLayout />, children: portfolioPages },
       { path: '/p/:slug', element: <PortfolioLayout />, children: portfolioPages },
+      { path: '/finish', element: <RequireAuth><FinishPage /></RequireAuth> },
+      { path: '/me', element: <RequireAuth><MePage /></RequireAuth> },
       { path: '/editor', element: <RequireAuth><EditorPage /></RequireAuth> },
       { path: '/account', element: <RequireAuth><AccountPage /></RequireAuth> },
       { path: '/privacy', element: <PrivacyPage /> },

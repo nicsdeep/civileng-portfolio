@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { normalizeCv } from '../../content/normalize'
 import type { Cv } from '../../content/types'
@@ -16,6 +15,8 @@ export interface PublicPortfolio {
   /** Base path of this portfolio's pages, e.g. "/p/jane-doe" or "/example". */
   basePath: string
   updatedAt: string | null
+  /** False only for the owner looking at their own hidden portfolio. */
+  published: boolean
 }
 
 /** Public addresses: lowercase letters, digits and single hyphens, 3–40 characters (mirrors the database rule). */
@@ -27,22 +28,16 @@ export function slugProblem(slug: string): string | null {
   return null
 }
 
-/** A published portfolio by its public address, or null if there is none. */
+/**
+ * A portfolio by its public address, or null if there is none. Row Level
+ * Security only returns hidden (unpublished) portfolios to their owner.
+ */
 export async function fetchPortfolioBySlug(slug: string): Promise<PublicPortfolio | null> {
   if (slugProblem(slug)) return null
-  const { data, error } = await supabase
-    .from('pf_profiles')
-    .select('content, updated_at')
-    .eq('slug', slug)
-    .eq('published', true)
-    .maybeSingle()
+  const { data, error } = await supabase.from('pf_profiles').select('content, updated_at, published').eq('slug', slug).maybeSingle()
   if (error) throw error
   if (!data) return null
-  return { cv: normalizeCv(data.content), basePath: `/p/${slug}`, updatedAt: data.updated_at as string }
-}
-
-export function usePortfolioBySlug(slug: string) {
-  return useQuery({ queryKey: ['portfolio', slug], queryFn: () => fetchPortfolioBySlug(slug) })
+  return { cv: normalizeCv(data.content), basePath: `/p/${slug}`, updatedAt: data.updated_at as string, published: data.published as boolean }
 }
 
 const COLUMNS = 'user_id, slug, published, content, updated_at'
@@ -60,7 +55,14 @@ export async function deleteMyPortfolio(userId: string): Promise<void> {
   if (error) throw error
 }
 
-export class SaveError extends Error {}
+export class SaveError extends Error {
+  /** "taken": the address belongs to someone else. */
+  code: 'taken' | 'invalid' | 'other'
+  constructor(code: SaveError['code'], message: string) {
+    super(message)
+    this.code = code
+  }
+}
 
 export async function saveMyPortfolio(userId: string, cv: Cv, slug: string | null, published: boolean): Promise<PortfolioRow> {
   const { data, error } = await supabase
@@ -69,9 +71,9 @@ export async function saveMyPortfolio(userId: string, cv: Cv, slug: string | nul
     .select(COLUMNS)
     .single()
   if (error) {
-    if (error.code === '23505') throw new SaveError('That public address is already taken. Try another one.')
-    if (error.code === '23514') throw new SaveError('Check the public address: use 3–40 lowercase letters, numbers and hyphens.')
-    throw new SaveError(error.message)
+    if (error.code === '23505') throw new SaveError('taken', 'That address is already taken. Try another one.')
+    if (error.code === '23514') throw new SaveError('invalid', 'Check the address: use 3–40 lowercase letters, numbers and hyphens.')
+    throw new SaveError('other', /fetch|network/i.test(error.message) ? 'Could not reach the server. Check your connection and try again.' : error.message)
   }
   return data as PortfolioRow
 }

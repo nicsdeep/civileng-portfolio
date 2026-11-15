@@ -1,6 +1,8 @@
 /**
- * The whole portfolio is one document. It is stored as JSON in
- * public.pf_profiles.content and bundled as a fallback in ./cv.ts.
+ * The whole portfolio is one document, stored as JSON in
+ * public.pf_profiles.content. Images (photo, logos, project images) are
+ * links to pictures elsewhere on the web, usually found by pasting a page
+ * link in the editor (see src/features/links).
  */
 export interface Link {
   label: string
@@ -15,6 +17,8 @@ export interface SkillGroup {
 export interface Experience {
   role: string
   org: string
+  /** Company logo (image link). */
+  logo: string
   location: string
   /** Free text, e.g. "07/2022" or "March 2026". */
   start: string
@@ -26,6 +30,8 @@ export interface Experience {
 export interface Education {
   degree: string
   school: string
+  /** School or university logo (image link). */
+  logo: string
   location: string
   /** Free text, e.g. "Expected November 2026". */
   dates: string
@@ -36,7 +42,10 @@ export interface Project {
   title: string
   subtitle: string
   description: string
+  /** Screenshot or cover picture (image link). */
+  image: string
   tech: string[]
+  /** The first link is shown under the project as its live/hosted link. */
   links: Link[]
   /** Featured projects also appear on the home page. */
   featured: boolean
@@ -46,6 +55,8 @@ export interface Certification {
   name: string
   issuer: string
   date: string
+  /** Credential or verification page. */
+  url: string
 }
 
 export interface Testimonial {
@@ -56,6 +67,8 @@ export interface Testimonial {
 
 export interface Cv {
   name: string
+  /** Profile photo (image link). */
+  photo: string
   headline: string
   location: string
   /** Short status line, e.g. "Final-year student · graduating November 2026". */

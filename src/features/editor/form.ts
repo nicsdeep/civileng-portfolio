@@ -8,7 +8,7 @@ import { normalizeCv } from '../../content/normalize'
  * toForm / fromForm convert between the two; fromForm output is normalized.
  */
 
-export type FieldKind = 'text' | 'textarea' | 'lines' | 'links' | 'checkbox'
+export type FieldKind = 'text' | 'textarea' | 'lines' | 'links' | 'checkbox' | 'image' | 'url'
 
 export interface FieldDef {
   key: string
@@ -17,6 +17,8 @@ export interface FieldDef {
   hint?: string
   /** Shown side by side with the next half-width field on wide screens. */
   half?: boolean
+  /** For kind "image": what to look for when a page link is pasted. */
+  image?: 'photo' | 'logo' | 'cover'
 }
 
 export type FormValue = string | boolean | Link[]
@@ -35,6 +37,7 @@ export type ListSection = 'skills' | 'experience' | 'education' | 'projects' | '
 
 export const PROFILE_FIELDS: FieldDef[] = [
   { key: 'name', label: 'Full name', kind: 'text', half: true },
+  { key: 'photo', label: 'Photo', kind: 'image', image: 'photo', hint: 'Paste a photo link, or your GitHub or LinkedIn profile link.' },
   { key: 'headline', label: 'Headline', kind: 'text', half: true, hint: 'e.g. Full-stack & AI engineer' },
   { key: 'status', label: 'Status line', kind: 'text', hint: 'Shown above your name, e.g. “Final-year student · graduating November 2026”' },
   { key: 'location', label: 'Location', kind: 'text', half: true },
@@ -54,6 +57,7 @@ export const SECTIONS: SectionDef[] = [
     fields: [
       { key: 'role', label: 'Role', kind: 'text', half: true },
       { key: 'org', label: 'Organization', kind: 'text', half: true },
+      { key: 'logo', label: 'Company logo', kind: 'image', image: 'logo', hint: 'Paste the company website or a logo link.' },
       { key: 'location', label: 'Location', kind: 'text' },
       { key: 'start', label: 'Start', kind: 'text', half: true, hint: 'e.g. 07/2022' },
       { key: 'end', label: 'End', kind: 'text', half: true, hint: 'Leave empty for “Present”' },
@@ -68,6 +72,7 @@ export const SECTIONS: SectionDef[] = [
     fields: [
       { key: 'degree', label: 'Degree or qualification', kind: 'text', half: true },
       { key: 'school', label: 'School', kind: 'text', half: true },
+      { key: 'logo', label: 'School logo', kind: 'image', image: 'logo', hint: 'Paste the school or university website, or a logo link.' },
       { key: 'location', label: 'Location', kind: 'text', half: true },
       { key: 'dates', label: 'Dates', kind: 'text', half: true, hint: 'e.g. Expected November 2026' },
       { key: 'bullets', label: 'Activities & highlights', kind: 'lines', hint: 'One per line.' },
@@ -82,8 +87,9 @@ export const SECTIONS: SectionDef[] = [
       { key: 'title', label: 'Title', kind: 'text', half: true },
       { key: 'subtitle', label: 'Subtitle', kind: 'text', half: true },
       { key: 'description', label: 'Description', kind: 'textarea' },
+      { key: 'image', label: 'Picture', kind: 'image', image: 'cover', hint: 'Paste the project link or an image link.' },
       { key: 'tech', label: 'Technologies', kind: 'lines', hint: 'One per line.' },
-      { key: 'links', label: 'Links', kind: 'links' },
+      { key: 'links', label: 'Links', kind: 'links', hint: 'The first link shows under the project as its live site.' },
       { key: 'featured', label: 'Feature on the home page', kind: 'checkbox' },
     ],
   },
@@ -106,6 +112,7 @@ export const SECTIONS: SectionDef[] = [
       { key: 'name', label: 'Name', kind: 'text' },
       { key: 'issuer', label: 'Issuer', kind: 'text', half: true },
       { key: 'date', label: 'Date', kind: 'text', half: true },
+      { key: 'url', label: 'Credential link', kind: 'url', hint: 'Optional: where people can verify it.' },
     ],
   },
   {

@@ -1,6 +1,6 @@
 /** Only allow returning to pages on this site after signing in. */
 export function safeNext(next: string | null): string {
-  return next && next.startsWith('/') && !next.startsWith('//') ? next : '/editor'
+  return next && next.startsWith('/') && !next.startsWith('//') ? next : '/me'
 }
 
 /** Mirrors the Supabase password rules (8+ characters, letters and digits). */

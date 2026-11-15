@@ -43,6 +43,12 @@ export function safeUrl(value: unknown): string {
   }
 }
 
+/** Pictures must come from a secure web address. */
+export function imageUrl(value: unknown): string {
+  const url = safeUrl(value)
+  return url.startsWith('https://') ? url : ''
+}
+
 function link(value: unknown): Link {
   const raw = obj(value)
   return { label: text(raw.label), url: safeUrl(raw.url) }
@@ -63,6 +69,7 @@ function experience(value: unknown): Experience {
   return {
     role: text(raw.role),
     org: text(raw.org),
+    logo: imageUrl(raw.logo),
     location: text(raw.location),
     start: text(raw.start),
     end: text(raw.end),
@@ -75,6 +82,7 @@ function education(value: unknown): Education {
   return {
     degree: text(raw.degree),
     school: text(raw.school),
+    logo: imageUrl(raw.logo),
     location: text(raw.location),
     dates: text(raw.dates),
     bullets: strings(raw.bullets, MAX_LONG),
@@ -87,6 +95,7 @@ function project(value: unknown): Project {
     title: text(raw.title),
     subtitle: text(raw.subtitle),
     description: text(raw.description, MAX_LONG),
+    image: imageUrl(raw.image),
     tech: strings(raw.tech),
     links: links(raw.links),
     featured: raw.featured === true,
@@ -95,7 +104,7 @@ function project(value: unknown): Project {
 
 function certification(value: unknown): Certification {
   const raw = obj(value)
-  return { name: text(raw.name), issuer: text(raw.issuer), date: text(raw.date) }
+  return { name: text(raw.name), issuer: text(raw.issuer), date: text(raw.date), url: safeUrl(raw.url).startsWith('http') ? safeUrl(raw.url) : '' }
 }
 
 function testimonial(value: unknown): Testimonial {
@@ -108,6 +117,7 @@ export function normalizeCv(value: unknown): Cv {
   const email = text(raw.email)
   return {
     name: text(raw.name),
+    photo: imageUrl(raw.photo),
     headline: text(raw.headline),
     location: text(raw.location),
     status: text(raw.status),

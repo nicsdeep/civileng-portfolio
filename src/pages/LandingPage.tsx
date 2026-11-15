@@ -1,4 +1,6 @@
-import { Link } from 'react-router'
+import { Link, Navigate } from 'react-router'
+import { useAuth } from '../features/auth/AuthProvider'
+import { useMyPortfolio } from '../features/portfolio/hooks'
 import { usePageTitle } from '../lib/usePageTitle'
 import { SectionTitle } from '../components/ui'
 
@@ -10,6 +12,11 @@ const STEPS = [
 
 export function LandingPage() {
   usePageTitle()
+  const { user } = useAuth()
+  const mine = useMyPortfolio()
+  // Returning owners go straight to their portfolio.
+  if (user && mine.isPending) return <div className="container-page py-16 text-center text-muted" role="status">Opening your portfolio…</div>
+  if (mine.data?.slug) return <Navigate to={`/p/${mine.data.slug}`} replace />
   return (
     <div className="container-page">
       <section className="py-14 sm:py-20" aria-labelledby="intro">

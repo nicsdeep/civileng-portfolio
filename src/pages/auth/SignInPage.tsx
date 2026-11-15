@@ -30,7 +30,11 @@ export function SignInPage() {
   }
 
   return (
-    <AuthLayout title="Welcome" accent="back." intro="Use your CivilEng account, the same one as on ResearchHub.">
+    <AuthLayout
+      title="Welcome"
+      accent="back."
+      intro={next === '/finish' ? 'Sign in to publish your portfolio.' : 'Use your CivilEng account, the same one as on ResearchHub.'}
+    >
       <form onSubmit={onSubmit} className="space-y-4">
         <Field id="email" label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         <Field id="password" label="Password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />

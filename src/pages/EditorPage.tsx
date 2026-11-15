@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link, useSearchParams } from 'react-router'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../features/auth/AuthProvider'
-import { deleteMyPortfolio, fetchMyPortfolio, saveMyPortfolio, slugProblem, type PortfolioRow } from '../features/portfolio/api'
-import { clearDraft, loadDraft, restoreDraft, type Draft } from '../features/import/draft'
+import { deleteMyPortfolio, saveMyPortfolio, slugProblem, type PortfolioRow } from '../features/portfolio/api'
+import { useMyPortfolio } from '../features/portfolio/hooks'
+import { saveWithFreeSlug } from '../features/portfolio/publish'
 import { ConfirmButton } from '../components/ConfirmButton'
 import { slugify } from '../features/import/parse'
 import { usePageTitle } from '../lib/usePageTitle'
 import { emptyCv } from '../content/cv'
 import { normalizeCv } from '../content/normalize'
 import type { Link as CvLink } from '../content/types'
-import { StatusMessage } from '../components/ui'
+import { BackLink, StatusMessage } from '../components/ui'
+import { AddProjectFromLink, ImageInput, type ProjectDraft } from '../features/links/LinkFields'
+import { autoLabel, cleanUrl } from '../features/links/preview'
 import {
   PROFILE_FIELDS,
   SECTIONS,
@@ -28,7 +31,8 @@ export function EditorPage() {
   usePageTitle('Edit portfolio')
   const { user } = useAuth()
   const userId = user!.id
-  const mine = useQuery({ queryKey: ['my-portfolio', userId], queryFn: () => fetchMyPortfolio(userId) })
+  const mine = useMyPortfolio()
+  const [params] = useSearchParams()
 
   if (mine.isPending) return <div className="container-page py-16 text-center text-muted" role="status">Loading your portfolio…</div>
   if (mine.isError) {
@@ -40,25 +44,29 @@ export function EditorPage() {
       </div>
     )
   }
-  return <Editor key={userId} userId={userId} row={mine.data} />
+  // Nothing saved yet: the quickest start is a résumé, unless they chose to start from scratch.
+  if (!mine.data && params.get('start') !== 'blank') return <Navigate to="/create" replace />
+  return <Editor key={userId} userId={userId} row={mine.data ?? null} />
 }
+
+const TABS = ['profile', ...SECTIONS.map((s) => s.key)] as const
+type Tab = (typeof TABS)[number]
 
 function Editor({ userId, row }: { userId: string; row: PortfolioRow | null }) {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [params] = useSearchParams()
-  const [draft, setDraft] = useState<Draft | null>(() => (params.get('start') === 'blank' ? null : loadDraft()))
   const saved = row ? normalizeCv(row.content) : emptyCv
-  const [form, setForm] = useState<CvForm>(() => toForm(draft?.cv ?? saved))
+  const [form, setForm] = useState<CvForm>(() => toForm(saved))
   const [slug, setSlug] = useState(row?.slug ?? '')
-  const [published, setPublished] = useState(row?.published ?? false)
+  const [published, setPublished] = useState(row?.published ?? true)
   const snapshot = (cv: unknown, s: string | null, p: boolean) => JSON.stringify([cv, s || null, p])
-  const [savedSnapshot, setSavedSnapshot] = useState(() => (row ? snapshot(saved, row.slug, row.published) : ''))
-  const [savedSlug, setSavedSlug] = useState(row?.published ? row.slug : null)
-  const [tab, setTab] = useState<'profile' | ListSection>('profile')
+  const savedSnapshot = row ? snapshot(saved, row.slug, row.published) : ''
+  const initialTab = params.get('tab') as Tab | null
+  const [tab, setTab] = useState<Tab>(initialTab && TABS.includes(initialTab) ? initialTab : 'profile')
   const [problem, setProblem] = useState<string | null>(null)
-  // Last removal that can still be undone (removing the résumé, clearing all fields).
-  const [undo, setUndo] = useState<{ message: string; form: CvForm; draft: Draft | null } | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
+  // Last "Clear all fields" that can still be undone.
+  const [undo, setUndo] = useState<CvForm | null>(null)
 
   const current = useMemo(() => fromForm(form), [form])
   const dirty = snapshot(current, slug, published) !== savedSnapshot
@@ -71,143 +79,83 @@ function Editor({ userId, row }: { userId: string; row: PortfolioRow | null }) {
   }, [dirty])
 
   const save = useMutation({
-    mutationFn: (address: string | null) => saveMyPortfolio(userId, current, address, published),
-    onSuccess: (row) => {
-      setSavedSnapshot(snapshot(normalizeCv(row.content), row.slug, row.published))
-      setSlug(row.slug ?? '')
-      setSavedSlug(row.published ? row.slug : null)
-      clearDraft()
-      setDraft(null)
-      queryClient.setQueryData(['my-portfolio', userId], row)
-      queryClient.invalidateQueries({ queryKey: ['portfolio'] })
+    mutationFn: async () => {
+      const address = slug.trim()
+      // First save from scratch: pick a free address from the name.
+      return address ? saveMyPortfolio(userId, current, address, published) : saveWithFreeSlug(userId, current, published)
+    },
+    onSuccess: async (saved) => {
+      queryClient.setQueryData(['my-portfolio', userId], saved)
+      await queryClient.invalidateQueries({ queryKey: ['portfolio', saved.slug] })
+      // Straight back to the portfolio, with a success message there.
+      navigate(`/p/${saved.slug}?status=${row ? 'saved' : 'new'}`)
     },
   })
 
   function onSubmit(event: FormEvent) {
     event.preventDefault()
     setProblem(null)
-    if (!current.name) return setProblem('Add your full name (Profile tab) before saving.')
-    // Suggest an address from the name the first time.
-    const address = slug.trim() || (published ? slugify(current.name) : '')
+    if (!current.name) {
+      setTab('profile')
+      return setProblem('Add your full name first.')
+    }
+    const address = slug.trim()
     if (address) {
       const issue = slugProblem(address)
-      if (issue) return setProblem(`Public address: ${issue}`)
+      if (issue) return setProblem(`Address: ${issue}`)
     }
-    if (published && !address) return setProblem('Choose a public address before publishing.')
-    setSlug(address)
-    save.mutate(address || null)
+    save.mutate()
   }
 
-  /** Drops the uploaded résumé: back to the saved portfolio, or an empty one. */
-  function removeResume() {
-    setUndo({ message: row ? 'Résumé removed. Showing your saved portfolio.' : 'Résumé removed.', form, draft })
-    setNotice(null)
-    clearDraft()
-    setDraft(null)
-    setForm(toForm(saved))
-  }
-
-  /** Empties every field. Nothing changes online until Save. */
   function clearAll() {
-    setUndo({ message: 'All fields cleared. Nothing changes on your public page until you press Save.', form, draft })
-    setNotice(null)
+    setUndo(form)
     setForm(toForm(emptyCv))
-  }
-
-  function undoLast() {
-    if (!undo) return
-    setForm(undo.form)
-    if (undo.draft) {
-      restoreDraft(undo.draft)
-      setDraft(undo.draft)
-    }
-    setUndo(null)
   }
 
   const remove = useMutation({
     mutationFn: () => deleteMyPortfolio(userId),
     onSuccess: () => {
-      clearDraft()
-      setDraft(null)
-      setUndo(null)
-      setForm(toForm(emptyCv))
-      setSlug('')
-      setPublished(false)
-      setSavedSnapshot('')
-      setSavedSlug(null)
-      setTab('profile')
-      setNotice('Your portfolio was deleted. Its public address no longer works and is free for anyone to use.')
       queryClient.setQueryData(['my-portfolio', userId], null)
       queryClient.invalidateQueries({ queryKey: ['portfolio'] })
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      navigate('/create?deleted=1', { replace: true })
     },
   })
-  const hasSaved = savedSnapshot !== ''
 
   const setProfile = (key: string, value: FormValue) => setForm((f) => ({ ...f, profile: { ...f.profile, [key]: value } }))
   const setList = (key: ListSection, items: FormItem[]) => setForm((f) => ({ ...f, lists: { ...f.lists, [key]: items } }))
 
-  const tabs: { key: 'profile' | ListSection; label: string }[] = [{ key: 'profile', label: 'Profile' }, ...SECTIONS.map((s) => ({ key: s.key, label: s.label }))]
+  const tabs: { key: Tab; label: string }[] = [{ key: 'profile', label: 'Profile' }, ...SECTIONS.map((s) => ({ key: s.key, label: s.label }))]
   const section = SECTIONS.find((s) => s.key === tab)
   const isEmpty = !current.name && current.experience.length === 0 && current.education.length === 0
 
   return (
-    <form onSubmit={onSubmit} className="container-page max-w-5xl py-10">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="eyebrow">Your portfolio · <Link to="/account" className="link normal-case tracking-normal">account</Link></p>
-          <h1 className="display mt-1 text-5xl">Edit <em className="text-brand-italic">portfolio.</em></h1>
-        </div>
-        {savedSlug && <Link to={`/p/${savedSlug}`} className="link text-sm" target="_blank">View your portfolio ↗</Link>}
-      </div>
-
-      {draft && (
-        <div role="status" className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl bg-accent-soft px-4 py-3 text-sm">
-          <p className="flex-1">
-            <strong>Filled in from {draft.source}.</strong> Check each tab, then press Save.
-            {row && ' Saving replaces your current portfolio.'}
-          </p>
-          <button type="button" className="btn-secondary h-9 py-0" onClick={removeResume}>Remove résumé</button>
-        </div>
-      )}
-      {undo && (
-        <div role="status" className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3 text-sm">
-          <p className="flex-1">{undo.message}</p>
-          <button type="button" className="btn-secondary h-9 py-0" onClick={undoLast}>Undo</button>
-          <button type="button" className="btn-quiet" aria-label="Dismiss" onClick={() => setUndo(null)}>✕</button>
-        </div>
-      )}
-      {notice && (
-        <p role="status" className="mt-4 rounded-2xl bg-accent-soft px-4 py-3 text-sm">{notice}</p>
-      )}
-      {!draft && !undo && isEmpty && (
-        <p className="mt-4 rounded-2xl bg-accent-soft px-4 py-3 text-sm">
-          Have a résumé? <Link to="/create" className="link font-semibold">Upload it</Link> and we will fill this in for you.
+    <form onSubmit={onSubmit} className="container-page max-w-5xl py-8">
+      <BackLink fallback={row?.slug ? `/p/${row.slug}` : '/create'} label={row?.slug ? 'Back to my portfolio' : 'Back'} />
+      <h1 className="display mt-2 text-5xl">{row ? 'Edit' : 'Build'} <em className="text-brand-italic">portfolio.</em></h1>
+      {!row && (
+        <p className="mt-2 text-sm text-muted">
+          Fill in what you like, then press Save to publish. Have a résumé? <Link to="/create" className="link font-semibold">Upload it instead</Link>.
         </p>
       )}
 
-      <div className="sticky top-16 z-10 -mx-4 mt-6 border-y border-line bg-bg/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-2xl sm:border">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <label className="flex min-w-0 flex-1 items-center gap-1 text-sm" htmlFor="slug">
-            <span className="shrink-0 text-muted">Address: /p/</span>
-            <input
-              id="slug"
-              className="field min-w-24 flex-1 py-1.5 text-base sm:text-sm"
-              placeholder={slugify(current.name) || 'your-name'}
-              value={slug}
-              onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 40))}
-              autoCapitalize="off"
-              spellCheck={false}
-            />
-          </label>
-          <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium">
-            <input type="checkbox" className="size-4 accent-[var(--accent)]" checked={published} onChange={(e) => setPublished(e.target.checked)} />
-            Published
-          </label>
-          <span className="text-xs text-muted" role="status">
-            {save.isPending ? 'Saving…' : dirty ? 'Unsaved changes' : 'All changes saved'}
+      {undo && (
+        <div role="status" className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3 text-sm">
+          <p className="flex-1">All fields cleared. Nothing changes on your page until you press Save.</p>
+          <button type="button" className="btn-secondary h-9 py-0" onClick={() => { setForm(undo); setUndo(null) }}>Undo</button>
+          <button type="button" className="btn-quiet" aria-label="Dismiss" onClick={() => setUndo(null)}>✕</button>
+        </div>
+      )}
+
+      {/* Save bar: always in reach, never covered. */}
+      <div className="sticky top-16 z-10 -mx-4 mt-4 border-y border-line bg-bg/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-2xl sm:border">
+        <div className="flex items-center gap-3">
+          <span className="min-w-0 flex-1 truncate text-sm text-muted" role="status">
+            {save.isPending ? 'Saving…' : dirty ? 'Unsaved changes' : 'No changes yet'}
           </span>
-          <button type="submit" className="btn-primary" disabled={save.isPending || !dirty}>Save</button>
+          {row?.slug && !dirty && <Link to={`/p/${row.slug}`} className="btn-quiet">View</Link>}
+          <button type="submit" className="btn-primary" disabled={save.isPending || (!dirty && Boolean(row))}>
+            {save.isPending ? 'Saving…' : row ? 'Save' : 'Save & publish'}
+          </button>
         </div>
         {problem && <p role="alert" className="mt-2 text-sm text-danger">{problem}</p>}
         {save.isError && <p role="alert" className="mt-2 text-sm text-danger">Could not save: {(save.error as Error).message}</p>}
@@ -241,29 +189,57 @@ function Editor({ userId, row }: { userId: string; row: PortfolioRow | null }) {
         )}
       </div>
 
-      <section aria-labelledby="start-over" className="mt-12 border-t border-line pt-6">
+      <section aria-labelledby="settings" className="panel mt-8 grid gap-4 p-5 sm:grid-cols-2 sm:p-6">
+        <h2 id="settings" className="label sm:col-span-2">Address & visibility</h2>
+        <div>
+          <label htmlFor="slug" className="mb-1 block text-sm font-medium">Your address</label>
+          <div className="flex items-center rounded-xl border border-line bg-surface focus-within:border-accent">
+            <span className="shrink-0 pl-3 text-sm text-muted">…/p/</span>
+            <input
+              id="slug"
+              className="w-full min-w-0 rounded-xl bg-transparent px-1 py-2 text-base outline-none sm:text-sm"
+              placeholder={slugify(current.name) || 'your-name'}
+              value={slug}
+              onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 40))}
+              autoCapitalize="off"
+              spellCheck={false}
+            />
+          </div>
+          <p className="mt-1 text-xs text-muted">{slug ? 'Changing it breaks links you already shared.' : 'Left empty, it is made from your name.'}</p>
+        </div>
+        <div>
+          <span className="mb-1 block text-sm font-medium">Who can see it</span>
+          <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
+            <input type="checkbox" className="size-5 accent-[var(--accent)]" checked={published} onChange={(e) => setPublished(e.target.checked)} />
+            Visible to everyone
+          </label>
+          <p className="mt-1 text-xs text-muted">Untick to hide it while you work on it.</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="start-over" className="mt-10 border-t border-line pt-6">
         <h2 id="start-over" className="label">Start over</h2>
         <div className="mt-2 grid gap-4 sm:grid-cols-3">
           <div>
-            <Link to="/create" className="btn-secondary">Upload a different résumé</Link>
-            <p className="mt-1 text-xs text-muted">Fills the editor again. Your page only changes when you save.</p>
+            <Link to="/create" className="btn-secondary">Upload a new résumé</Link>
+            <p className="mt-1 text-xs text-muted">Updates your portfolio in one go and keeps your pictures and links.</p>
           </div>
           <div>
-            <button type="button" className="btn-secondary" onClick={clearAll} disabled={isEmpty && !draft}>Clear all fields</button>
+            <button type="button" className="btn-secondary" onClick={clearAll} disabled={isEmpty}>Clear all fields</button>
             <p className="mt-1 text-xs text-muted">Empties the editor. You can undo it.</p>
           </div>
-          {hasSaved && (
+          {row && (
             <div>
               <ConfirmButton
                 className="btn border border-danger/40 bg-surface text-danger hover:bg-danger/10"
-                question={<>Delete your portfolio{savedSlug ? <> and take <strong>/p/{savedSlug}</strong> offline</> : ''}? This cannot be undone.</>}
+                question={<>Delete your portfolio{row.slug ? <> and take <strong>/p/{row.slug}</strong> offline</> : ''}? This cannot be undone.</>}
                 confirmLabel="Delete for good"
                 onConfirm={() => remove.mutate()}
                 disabled={remove.isPending}
               >
                 {remove.isPending ? 'Deleting…' : 'Delete portfolio'}
               </ConfirmButton>
-              <p className="mt-1 text-xs text-muted">Removes it from the site and the database.</p>
+              <p className="mt-1 text-xs text-muted">Removes it from the site.</p>
               {remove.isError && <p role="alert" className="mt-1 text-sm text-danger">Could not delete: {(remove.error as Error).message}</p>}
             </div>
           )}
@@ -289,8 +265,16 @@ function ListEditor({ section, items, onChange }: { section: (typeof SECTIONS)[n
     setOpen(item._key)
   }
 
+  function addFromLink(project: ProjectDraft) {
+    const item = blankItem(section)
+    Object.assign(item, project, { featured: items.filter((i) => i.featured === true).length < 3 })
+    onChange([item, ...items])
+    setOpen(item._key)
+  }
+
   return (
     <div className="space-y-3">
+      {section.key === 'projects' && <AddProjectFromLink onAdd={addFromLink} />}
       {items.length === 0 && <p className="text-sm text-muted">Nothing here yet.</p>}
       {items.map((item, index) => {
         const expanded = open === item._key
@@ -323,7 +307,7 @@ function ListEditor({ section, items, onChange }: { section: (typeof SECTIONS)[n
           </div>
         )
       })}
-      <button type="button" className="btn-secondary" onClick={add}>Add {section.itemLabel}</button>
+      <button type="button" className="btn-secondary" onClick={add}>{section.key === 'projects' ? 'Add a project by hand' : `Add ${section.itemLabel}`}</button>
     </div>
   )
 }
@@ -338,6 +322,15 @@ function FieldInput({ id, field, value, onChange }: { id: string; field: FieldDe
         <input id={id} type="checkbox" className="size-4 accent-[var(--accent)]" checked={value === true} onChange={(e) => onChange(e.target.checked)} />
         {field.label}
       </label>
+    )
+  }
+  if (field.kind === 'image') {
+    return (
+      <div className={span}>
+        <label htmlFor={id} className="mb-1 block text-sm font-medium">{field.label}</label>
+        <ImageInput id={id} value={String(value ?? '')} mode={field.image ?? 'cover'} onChange={onChange} />
+        {hint}
+      </div>
     )
   }
   if (field.kind === 'links') {
@@ -356,7 +349,15 @@ function FieldInput({ id, field, value, onChange }: { id: string; field: FieldDe
       {multiline ? (
         <textarea id={id} className="field min-h-28 text-base sm:text-sm" rows={field.kind === 'lines' ? 5 : 6} value={String(value ?? '')} onChange={(e) => onChange(e.target.value)} />
       ) : (
-        <input id={id} className="field text-base sm:text-sm" value={String(value ?? '')} onChange={(e) => onChange(e.target.value)} />
+        <input
+          id={id}
+          className="field text-base sm:text-sm"
+          value={String(value ?? '')}
+          inputMode={field.kind === 'url' ? 'url' : undefined}
+          placeholder={field.kind === 'url' ? 'https://…' : undefined}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={field.kind === 'url' ? (e) => onChange(cleanUrl(e.target.value) || e.target.value) : undefined}
+        />
       )}
       {hint}
     </div>
@@ -378,12 +379,13 @@ function LinksInput({ id, links, onChange }: { id: string; links: CvLink[]; onCh
             className="field flex-1 text-base sm:text-sm"
             value={l.url}
             onChange={(e) => update(index, { url: e.target.value })}
+            onBlur={() => update(index, autoLabel(l))}
           />
           <button type="button" className="btn-quiet" aria-label="Remove link" onClick={() => onChange(links.filter((_, i) => i !== index))}>✕</button>
         </div>
       ))}
       <button type="button" className="btn-quiet" onClick={() => onChange([...links, { label: '', url: '' }])}>+ Add link</button>
-      <p className="text-xs text-muted">Links need a full address starting with https://; others are not saved.</p>
+      <p className="text-xs text-muted">Paste the address; the label fills in by itself.</p>
     </div>
   )
 }

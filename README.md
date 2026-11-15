@@ -1,21 +1,19 @@
 # CivilEng Portfolio
 
+> **Agents and developers: read [`AGENTS.md`](AGENTS.md) first.** Then read
+> [`docs/HANDOVER.md`](docs/HANDOVER.md), [`docs/PRD.md`](docs/PRD.md) and
+> [`docs/QAP.md`](docs/QAP.md) before any change, and update them after it.
+
 Turn a résumé into a portfolio website. Part of CivilEng, alongside
 [ResearchHub](https://civileng-researchhub.vercel.app).
 Live at <https://civileng-portfolio.vercel.app>.
 
 ## How it works
 
-1. **Create** (`/create`): upload a PDF or Word (.docx) résumé, paste its text, or start from scratch.
-   The file is read in the browser by rules in `src/features/import/` (no AI): text and layout come from
-   `extract.ts` (pdf.js for PDF, the document XML for .docx), and `parse.ts` finds the sections. After the visitor
-   ticks the consent box, every upload is kept on record (`history.ts`): see "Upload history" below.
-2. **Edit** (`/editor`): sign in with a CivilEng account (shared with ResearchHub), check every section, choose a
-   public address. The unsaved draft waits in the browser's local storage while the visitor signs in, and is
-   removed once saved.
-3. **Publish**: the portfolio is public at `/p/<address>`. `/example` shows a made-up person.
-
-Phone numbers are never copied from a résumé onto the public page; people can add one in the editor if they want.
+Upload a résumé (PDF, Word or text) → sign up once if needed → the portfolio is live at
+`/p/<address>`, with a success banner and a share link. Owners update it from the owner bar
+(Edit details · Upload new résumé). Pictures, logos and projects are added by pasting links.
+The full journey and rules are in [`docs/PRD.md`](docs/PRD.md).
 
 ## Stack
 
