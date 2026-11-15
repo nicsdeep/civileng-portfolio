@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../features/auth/AuthProvider'
 import { deleteMyPortfolio, fetchMyPortfolio, saveMyPortfolio, slugProblem, type PortfolioRow } from '../features/portfolio/api'
-import { clearDraft, loadDraft, saveDraft, type Draft } from '../features/import/draft'
+import { clearDraft, loadDraft, restoreDraft, type Draft } from '../features/import/draft'
 import { ConfirmButton } from '../components/ConfirmButton'
 import { slugify } from '../features/import/parse'
 import { usePageTitle } from '../lib/usePageTitle'
@@ -118,7 +118,7 @@ function Editor({ userId, row }: { userId: string; row: PortfolioRow | null }) {
     if (!undo) return
     setForm(undo.form)
     if (undo.draft) {
-      saveDraft(undo.draft.cv, undo.draft.source)
+      restoreDraft(undo.draft)
       setDraft(undo.draft)
     }
     setUndo(null)

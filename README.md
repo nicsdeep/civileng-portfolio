@@ -7,8 +7,9 @@ Live at <https://civileng-portfolio.vercel.app>.
 ## How it works
 
 1. **Create** (`/create`): upload a PDF or Word (.docx) résumé, paste its text, or start from scratch.
-   The file is read **in the browser** by rules in `src/features/import/` (no AI, no upload): text and layout come
-   from `extract.ts` (pdf.js for PDF, the document XML for .docx), and `parse.ts` finds the sections.
+   The file is read in the browser by rules in `src/features/import/` (no AI): text and layout come from
+   `extract.ts` (pdf.js for PDF, the document XML for .docx), and `parse.ts` finds the sections. After the visitor
+   ticks the consent box, every upload is kept on record (`history.ts`): see "Upload history" below.
 2. **Edit** (`/editor`): sign in with a CivilEng account (shared with ResearchHub), check every section, choose a
    public address. The unsaved draft waits in the browser's local storage while the visitor signs in, and is
    removed once saved.
@@ -27,6 +28,16 @@ fflate (loaded only on the Create page), deployed on Vercel.
 `published`. Row Level Security: owners read and write only their own row; visitors read only the public columns
 of published rows. All stored content goes through `normalizeCv` before it is shown (only `http(s)` and `mailto`
 links survive).
+
+## Upload history
+
+Every upload (with or without an account) is saved in `public.pf_resume_uploads`: name, email, **phone**,
+location, everything parsed, the extracted text, and the original file in the private Storage bucket
+`pf-resumes`. Nobody can read these through the app (insert-only); open them in the Supabase dashboard:
+Table editor → `pf_resume_uploads`, and Storage → `pf-resumes`. Anonymous uploads are linked to the account
+when the person signs in on the same device. Records stay after a portfolio or account is deleted (see
+`/privacy`); delete them by hand on request. Abuse limits: 10 uploads per hour per network address (stored only
+as a hash), 300 per hour in total, files up to 10 MB as PDF/DOCX/TXT only.
 
 ## Local development
 

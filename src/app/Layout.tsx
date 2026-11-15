@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, ScrollRestoration, useLocation } from 'react-router'
+import { Link, NavLink, Outlet, ScrollRestoration, useLocation } from 'react-router'
 import { BrandMark, Logo } from '../components/Logo'
 import { useAuth } from '../features/auth/AuthProvider'
 
@@ -76,7 +76,8 @@ export function Layout() {
             <p>Turn your résumé into a portfolio website.</p>
             <p className="mt-1">
               Part of CivilEng, with{' '}
-              <a className="link" href="https://civileng-researchhub.vercel.app" target="_blank" rel="noopener noreferrer">ResearchHub</a>.
+              <a className="link" href="https://civileng-researchhub.vercel.app" target="_blank" rel="noopener noreferrer">ResearchHub</a>.{' '}
+              <Link to="/privacy" className="link">Privacy</Link>
             </p>
           </div>
         </div>

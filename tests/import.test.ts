@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest'
-import { parseResume, sectionFor, slugify, takeDates } from '../src/features/import/parse'
+import { findPhone, parseResume, sectionFor, slugify, takeDates } from '../src/features/import/parse'
 import { docxXmlToText, pdfItemsToText, type PdfItem } from '../src/features/import/extract'
 import { slugProblem } from '../src/features/portfolio/api'
 
@@ -56,9 +56,15 @@ describe('parseResume (plain text)', () => {
     expect(cv.links).toEqual([{ label: 'LinkedIn', url: 'https://linkedin.com/in/janedoe' }])
   })
 
-  it('never copies the phone number onto the public portfolio', () => {
+  it('finds the phone number for the private record, but never puts it on the public portfolio', () => {
+    expect(parseResume(PLAIN).phone).toBe('+1 555 010 0199')
     expect(cv.phone).toBe('')
     expect(JSON.stringify(cv)).not.toContain('555')
+  })
+
+  it('does not mistake dates for phone numbers', () => {
+    expect(findPhone('Engineer 2016 - 2020\nTel: 0712 345 678')).toBe('0712 345 678')
+    expect(findPhone('2016 - 2020, 10/01/2024')).toBe('')
   })
 
   it('reads the summary and experience', () => {
