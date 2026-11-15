@@ -10,6 +10,7 @@ import { SkillsPage } from '../pages/portfolio/SkillsPage'
 import { ContactPage } from '../pages/portfolio/ContactPage'
 import { EditorPage } from '../pages/EditorPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
+import { PrivacyPage } from '../pages/PrivacyPage'
 import { SignInPage } from '../pages/auth/SignInPage'
 import { SignUpPage } from '../pages/auth/SignUpPage'
 import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage'
@@ -35,6 +36,7 @@ export const router = createBrowserRouter([
       { path: '/p/:slug', element: <PortfolioLayout />, children: portfolioPages },
       { path: '/editor', element: <RequireAuth><EditorPage /></RequireAuth> },
       { path: '/account', element: <RequireAuth><AccountPage /></RequireAuth> },
+      { path: '/privacy', element: <PrivacyPage /> },
       { path: '/sign-in', element: <SignInPage /> },
       { path: '/sign-up', element: <SignUpPage /> },
       { path: '/forgot-password', element: <ForgotPasswordPage /> },

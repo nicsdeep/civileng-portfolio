@@ -3,7 +3,7 @@ import { usePageTitle } from '../lib/usePageTitle'
 import { SectionTitle } from '../components/ui'
 
 const STEPS = [
-  { title: 'Upload your résumé', text: 'PDF, Word or plain text. It is read right here in your browser; nothing is sent anywhere until you save.' },
+  { title: 'Upload your résumé', text: 'PDF, Word or plain text. We read it and keep it securely on record; nothing is public until you publish.' },
   { title: 'Check and edit', text: 'Your experience, education, projects, skills and certifications are filled in. Fix anything, add what is missing and reorder.' },
   { title: 'Publish', text: 'Choose your address, like /p/your-name, and share one link instead of a PDF. Update it whenever you like.' },
 ]

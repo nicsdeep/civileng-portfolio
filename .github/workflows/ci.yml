@@ -42,8 +42,8 @@ jobs:
       - name: Run Row Level Security tests
         run: |
           supabase/tests/run-rls-tests.sh 2>&1 | tee rls.log
-          # Expect exactly the 10 intentional errors from the test script.
-          test "$(grep -c 'ERROR' rls.log)" -eq 10 || { echo "::error::Unexpected RLS test result"; exit 1; }
+          # Expect exactly the 20 intentional errors from the test script.
+          test "$(grep -c 'ERROR' rls.log)" -eq 20 || { echo "::error::Unexpected RLS test result"; exit 1; }
           grep -q 'permission denied for table pf_profiles' rls.log
           # Nobody but the owner may see an unpublished portfolio.
           grep -A2 'b_sees_unpublished' rls.log | grep -qE '^ +0$'
@@ -51,3 +51,8 @@ jobs:
           # Addresses are unique and required before publishing.
           grep -q 'pf_profiles_slug_key' rls.log
           grep -q 'pf_profiles_published_needs_slug' rls.log
+          # Upload history: write-only, rate limited, kept after account deletion.
+          grep -q 'permission denied for table pf_resume_uploads' rls.log
+          grep -q 'Too many uploads from this network' rls.log
+          grep -A2 'anon_reads_files' rls.log | grep -qE '^ +0$'
+          grep -A2 'uploads_kept' rls.log | grep -qE '^ +2 \| +0$'

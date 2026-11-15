@@ -6,8 +6,11 @@ import { parseResume, type ParseResult } from '../features/import/parse'
 import { clearDraft, loadDraft, saveDraft, type Draft } from '../features/import/draft'
 import { ConfirmButton } from '../components/ConfirmButton'
 import { useAuth } from '../features/auth/AuthProvider'
+import { HistoryError, recordUpload } from '../features/import/history'
 
-type Status = { kind: 'idle' } | { kind: 'reading'; name: string } | { kind: 'error'; message: string } | { kind: 'done'; result: ParseResult; source: string }
+type Status = { kind: 'idle' } | { kind: 'reading'; name: string } | { kind: 'saving' } | { kind: 'error'; message: string } | { kind: 'done'; result: ParseResult; source: string }
+
+const REMOVED = 'Résumé removed from this browser. A record of the upload is kept, as explained in the privacy notice.'
 
 export function CreatePage() {
   usePageTitle('Create your portfolio')
@@ -19,27 +22,41 @@ export function CreatePage() {
   const [notice, setNotice] = useState<string | null>(null)
   const navigate = useNavigate()
   const input = useRef<HTMLInputElement>(null)
+  const { user } = useAuth()
+  // Agreement to keep the résumé on record; required before reading anything.
+  const [consentAt, setConsentAt] = useState<Date | null>(null)
+  const busy = status.kind === 'reading' || status.kind === 'saving'
 
   async function readFile(file: File) {
+    if (!consentAt) return setStatus({ kind: 'error', message: 'Please tick the box to agree before uploading.' })
     setNotice(null)
     setStatus({ kind: 'reading', name: file.name })
     try {
       const { extractText } = await import('../features/import/extract')
       const text = await extractText(file)
-      finish(text, file.name)
+      await finish(text, file.name, file)
     } catch (error) {
       const message = error instanceof Error ? error.message : ''
       setStatus({ kind: 'error', message: message || 'This file could not be read. Try another format, or paste the text.' })
     }
   }
 
-  function finish(text: string, source: string) {
+  async function finish(text: string, source: string, file?: File) {
     const result = parseResume(text)
     if (!result.cv.name && result.cv.experience.length === 0 && result.cv.education.length === 0) {
       setStatus({ kind: 'error', message: 'We could not find résumé sections in this text. Check it is your résumé, or start from scratch.' })
       return
     }
-    saveDraft(result.cv, source)
+    // Keep it on record before going on.
+    setStatus({ kind: 'saving' })
+    let upload
+    try {
+      upload = await recordUpload({ result, text, file, consentAt: consentAt ?? new Date(), signedIn: Boolean(user) })
+    } catch (error) {
+      setStatus({ kind: 'error', message: error instanceof HistoryError ? error.message : 'Could not save your résumé. Check your connection and try again.' })
+      return
+    }
+    saveDraft(result.cv, source, { uploadId: upload.id, claimToken: upload.claimToken })
     setDraft(loadDraft())
     setStatus({ kind: 'done', result, source })
     window.scrollTo({ top: 0 })
@@ -54,8 +71,10 @@ export function CreatePage() {
 
   function onPaste(event: FormEvent) {
     event.preventDefault()
+    if (!consentAt) return setStatus({ kind: 'error', message: 'Please tick the box to agree before continuing.' })
     if (pasted.trim().length < 40) return setStatus({ kind: 'error', message: 'Paste the full text of your résumé.' })
-    finish(pasted, 'pasted text')
+    setNotice(null)
+    void finish(pasted, 'pasted text')
   }
 
   /** Deletes the résumé read in this browser and goes back to the start. */
@@ -74,7 +93,7 @@ export function CreatePage() {
         result={status.result}
         source={status.source}
         onReplace={() => removeResume(null)}
-        onRemove={() => removeResume('Résumé removed. Nothing from it is kept in this browser.')}
+        onRemove={() => removeResume(REMOVED)}
       />
     )
   }
@@ -82,7 +101,7 @@ export function CreatePage() {
   return (
     <div className="container-page max-w-4xl py-10">
       <PageHeading eyebrow="Create" title="Start with your" accent="résumé.">
-        Your file is read in this browser. Nothing is uploaded or saved until you choose to publish.
+        We read it, keep a private copy on record, and fill in your portfolio for you to check before publishing.
       </PageHeading>
 
       {notice && (
@@ -92,7 +111,7 @@ export function CreatePage() {
         </p>
       )}
 
-      {draft && status.kind !== 'reading' && (
+      {draft && !busy && (
         <section aria-labelledby="in-progress" className="panel mb-6 flex flex-wrap items-center gap-4 p-5">
           <div className="min-w-0 flex-1">
             <h2 id="in-progress" className="label">Résumé in progress</h2>
@@ -104,12 +123,26 @@ export function CreatePage() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" className="btn-primary" onClick={() => navigate('/editor')}>Continue</button>
-            <ConfirmButton question="Remove this résumé from this browser?" confirmLabel="Remove" onConfirm={() => removeResume('Résumé removed. Nothing from it is kept in this browser.')}>
+            <ConfirmButton question="Remove this résumé from this browser?" confirmLabel="Remove" onConfirm={() => removeResume(REMOVED)}>
               Remove
             </ConfirmButton>
           </div>
         </section>
       )}
+
+      <label className={`mb-6 flex items-start gap-3 rounded-2xl border p-4 text-sm ${consentAt ? 'border-line bg-surface' : 'border-accent bg-accent-soft'}`}>
+        <input
+          type="checkbox"
+          className="mt-0.5 size-5 shrink-0 accent-[var(--accent)]"
+          checked={consentAt !== null}
+          onChange={(e) => setConsentAt(e.target.checked ? new Date() : null)}
+        />
+        <span>
+          I agree that CivilEng Portfolio keeps my résumé file and the details in it, including my phone number, in its private
+          records, as described in the <Link to="/privacy" className="link font-semibold" target="_blank">privacy notice</Link>. Only
+          what I publish appears on my public portfolio.
+        </span>
+      </label>
 
       <div
         className={`panel flex flex-col items-center justify-center gap-3 border-2 border-dashed p-8 text-center sm:p-12 ${dragging ? 'border-accent bg-accent-soft' : ''}`}
@@ -137,9 +170,10 @@ export function CreatePage() {
             e.target.value = ''
           }}
         />
-        <button type="button" className="btn-primary h-11 px-5 text-base" onClick={() => input.current?.click()} disabled={status.kind === 'reading'}>
-          {status.kind === 'reading' ? `Reading ${status.name}…` : 'Choose résumé'}
+        <button type="button" className="btn-primary h-11 px-5 text-base" onClick={() => input.current?.click()} disabled={busy || !consentAt}>
+          {status.kind === 'reading' ? `Reading ${status.name}…` : status.kind === 'saving' ? 'Saving…' : 'Choose résumé'}
         </button>
+        {!consentAt && <p className="text-xs text-muted">Tick the box above first.</p>}
       </div>
 
       {status.kind === 'error' && <p role="alert" className="mt-4 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">{status.message}</p>}
@@ -149,7 +183,9 @@ export function CreatePage() {
         <p className="mt-1 text-sm text-muted">Copy everything from your résumé document and paste it here.</p>
         <textarea id="pasted" className="field mt-3 min-h-48 text-base sm:text-sm" value={pasted} onChange={(e) => setPasted(e.target.value)} />
         <div className="mt-3 flex flex-wrap gap-2">
-          <button type="submit" className="btn-secondary" disabled={!pasted.trim()}>Build my portfolio</button>
+          <button type="submit" className="btn-secondary" disabled={!pasted.trim() || !consentAt || busy}>
+            {status.kind === 'saving' ? 'Saving…' : 'Build my portfolio'}
+          </button>
           {pasted && <button type="button" className="btn-quiet" onClick={() => setPasted('')}>Clear text</button>}
         </div>
       </form>

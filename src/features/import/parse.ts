@@ -425,6 +425,19 @@ function parseTestimonials(lines: string[]): Testimonial[] {
   return [{ quote, name: tidy(name ?? ''), title: tidy(title.join(', ')) }]
 }
 
+/** First thing that looks like a phone number (7–15 digits), not a date range like "2016 - 2020". */
+export function findPhone(text: string): string {
+  for (const match of text.matchAll(new RegExp(PHONE_RE.source, 'g'))) {
+    const candidate = tidy(match[0])
+    const digits = candidate.replace(/\D/g, '')
+    if (digits.length < 7 || digits.length > 15) continue
+    if (/^(?:19|20)\d{2}\s*[-–]\s*(?:19|20)\d{2}$/.test(candidate)) continue
+    if (/^\d{1,2}[./-]\d{1,2}[./-]\d{2,4}$/.test(candidate)) continue
+    return candidate.slice(0, 40)
+  }
+  return ''
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -433,6 +446,8 @@ export interface ParseResult {
   cv: Cv
   /** Headings that were found but are not part of a portfolio (e.g. "References"). */
   skipped: string[]
+  /** Phone number found in the résumé. Kept in the private upload history, never on the public portfolio. */
+  phone: string
 }
 
 export function parseResume(text: string): ParseResult {
@@ -452,6 +467,7 @@ export function parseResume(text: string): ParseResult {
 
   // Contact details from the whole text, links from the header and link sections.
   cv.email = text.match(EMAIL_RE)?.[0] ?? ''
+  const phone = findPhone(text)
   const headerText = header.join('\n')
   const links: Link[] = findLinks(headerText)
 
@@ -521,7 +537,7 @@ export function parseResume(text: string): ParseResult {
   cv.links = uniqueBy(links, (l) => l.url.replace(/\/$/, ''))
 
   if (!cv.headline && cv.experience[0]?.role) cv.headline = cv.experience[0].role
-  return { cv: normalizeCv(cv), skipped }
+  return { cv: normalizeCv(cv), skipped, phone }
 }
 
 /** "Jane Wanjiru Doe" → "jane-wanjiru-doe" (also used to suggest a public address). */
