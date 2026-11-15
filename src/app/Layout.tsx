@@ -77,7 +77,7 @@ export function Layout() {
             <p className="mt-1">
               Part of CivilEng, with{' '}
               <a className="link" href="https://civileng-researchhub.vercel.app" target="_blank" rel="noopener noreferrer">ResearchHub</a>.{' '}
-              <Link to="/privacy" className="link">Privacy</Link>
+              <Link to="/privacy" className="link">Privacy Policy</Link>
             </p>
           </div>
         </div>

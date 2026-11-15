@@ -2,56 +2,60 @@ import { Link } from 'react-router'
 import { usePageTitle } from '../lib/usePageTitle'
 import { PageHeading, SectionTitle } from '../components/ui'
 
+export const PRIVACY_EMAIL = 'civileng.portfolio@gmail.com'
+
 export function PrivacyPage() {
-  usePageTitle('Privacy')
+  usePageTitle('Privacy Policy')
   return (
     <div className="container-page max-w-3xl py-10">
-      <PageHeading eyebrow="Privacy" title="Your résumé and" accent="your data." />
+      <PageHeading eyebrow="Privacy Policy" title="How we handle" accent="your information." />
 
       <div className="space-y-8 leading-relaxed">
-        <section aria-labelledby="kept">
-          <SectionTitle id="kept">What we keep</SectionTitle>
-          <p>When you upload or paste a résumé, after you agree to it, CivilEng Portfolio keeps a record of that upload:</p>
+        <section aria-labelledby="collect">
+          <SectionTitle id="collect">Information we collect</SectionTitle>
+          <p>When you use CivilEng Portfolio, we process the information you provide to create your portfolio:</p>
           <ul className="mt-3 list-disc space-y-1.5 pl-5 marker:text-accent">
-            <li>the original file (PDF, Word or text), if you uploaded one;</li>
-            <li>the text read from it, and the details found in it, such as your name, email address, phone number, location, experience, education, skills and certifications;</li>
-            <li>when it was uploaded, and your account if you are signed in or sign in afterwards on the same device;</li>
-            <li>a scrambled (hashed) form of your network address, used only to stop abuse. Your actual address is not stored.</li>
+            <li>résumés you upload or paste, and the details in them, such as your name, contact details, experience, education and skills;</li>
+            <li>your account details if you sign in, and the portfolio content you save;</li>
+            <li>basic technical information, such as a hashed network identifier used to protect the service from abuse.</li>
           </ul>
         </section>
 
-        <section aria-labelledby="who">
-          <SectionTitle id="who">Who can see it</SectionTitle>
+        <section aria-labelledby="use">
+          <SectionTitle id="use">How we use it</SectionTitle>
           <p>
-            These records are private. They are not shown on any portfolio and cannot be read by other visitors or other users.
-            Only the people who run CivilEng Portfolio can see them. Your public portfolio shows only what you choose to publish
-            in the editor, and never your phone number unless you add it yourself.
+            To build and show your portfolio, to keep service and audit records, to provide support, to prevent misuse, and to
+            improve how résumés are read.
           </p>
         </section>
 
-        <section aria-labelledby="why">
-          <SectionTitle id="why">Why</SectionTitle>
-          <p>To build your portfolio, to keep a history of uploads, to help you if something goes wrong, and to improve how résumés are read.</p>
+        <section aria-labelledby="visible">
+          <SectionTitle id="visible">What is public</SectionTitle>
+          <p>
+            Only what you choose to publish in the editor appears on your portfolio. Your phone number is never shown unless you
+            add it yourself. Everything else stays private and is not shared with other users or sold to anyone.
+          </p>
         </section>
 
-        <section aria-labelledby="how-long">
-          <SectionTitle id="how-long">How long</SectionTitle>
+        <section aria-labelledby="retention">
+          <SectionTitle id="retention">How long we keep it</SectionTitle>
           <p>
-            Upload records are kept even if you delete your portfolio or your account. “Remove résumé” on this site removes it from
-            your browser only. You can ask for your records to be deleted at any time, and we will do so.
+            We keep uploaded résumés and related records for as long as needed for the purposes above, including after a portfolio
+            or account is deleted, unless you ask us to delete them.
           </p>
         </section>
 
         <section aria-labelledby="rights">
           <SectionTitle id="rights">Your rights</SectionTitle>
           <p>
-            You can ask to see, correct or delete the records we hold about you. Contact the CivilEng Portfolio team with the email
-            address on your résumé and we will reply.
+            You can ask to see, correct or delete the information we hold about you. Email us at{' '}
+            <a href={`mailto:${PRIVACY_EMAIL}?subject=${encodeURIComponent('Privacy request')}`} className="link font-semibold">{PRIVACY_EMAIL}</a>{' '}
+            and we will reply.
           </p>
         </section>
 
         <p>
-          <Link to="/create" className="btn-primary">Back to create your portfolio</Link>
+          <Link to="/create" className="btn-primary">Create your portfolio</Link>
         </p>
       </div>
     </div>
