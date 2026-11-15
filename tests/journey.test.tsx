@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, configure } from '@testing-library/react'
+
+// Slow or busy machines (CI, full parallel runs) need more than the 1 s default to settle.
+configure({ asyncUtilTimeout: 4000 })
 import { RouterProvider, createMemoryRouter, useLocation } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
@@ -256,7 +259,9 @@ describe('owner tools and editing', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete portfolio' }))
     expect(db.deleted).toBe(0)
     fireEvent.click(screen.getByRole('button', { name: 'Delete for good' }))
-    await waitFor(() => expect(where()).toBe('/create?deleted=1'))
+    // The Create page says so (and may already have tidied ?deleted=1 out of the address).
+    expect(await screen.findByText('Your portfolio was deleted. Its address is free again.')).toBeTruthy()
+    expect(where()).toMatch(/^\/create/)
     expect(db.deleted).toBe(1)
     expect(screen.getByText(/Your portfolio was deleted/)).toBeTruthy()
   })

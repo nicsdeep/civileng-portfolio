@@ -15,7 +15,7 @@ export function PrivacyPage() {
           <SectionTitle id="collect">Information we collect</SectionTitle>
           <p>When you use CivilEng Portfolio, we process the information you provide to create your portfolio:</p>
           <ul className="mt-3 list-disc space-y-1.5 pl-5 marker:text-accent">
-            <li>résumés you upload or paste, and the details in them, such as your name, contact details, experience, education and skills;</li>
+            <li>résumés you upload or paste, profile links you give us (such as LinkedIn), and the details in them, such as your name, contact details, experience, education and skills;</li>
             <li>your account details if you sign in, and the portfolio content you save;</li>
             <li>basic technical information, such as a hashed network identifier used to protect the service from abuse.</li>
           </ul>

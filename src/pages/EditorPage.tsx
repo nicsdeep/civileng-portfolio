@@ -33,6 +33,7 @@ export function EditorPage() {
   const userId = user!.id
   const mine = useMyPortfolio()
   const [params] = useSearchParams()
+  const [deleted, setDeleted] = useState(false)
 
   if (mine.isPending) return <div className="container-page py-16 text-center text-muted" role="status">Loading your portfolio…</div>
   if (mine.isError) {
@@ -45,14 +46,16 @@ export function EditorPage() {
     )
   }
   // Nothing saved yet: the quickest start is a résumé, unless they chose to start from scratch.
+  // Just deleted: go to Create with the "deleted" notice, never without it.
+  if (deleted) return <Navigate to="/create?deleted=1" replace />
   if (!mine.data && params.get('start') !== 'blank') return <Navigate to="/create" replace />
-  return <Editor key={userId} userId={userId} row={mine.data ?? null} />
+  return <Editor key={userId} userId={userId} row={mine.data ?? null} onDeleted={() => setDeleted(true)} />
 }
 
 const TABS = ['profile', ...SECTIONS.map((s) => s.key)] as const
 type Tab = (typeof TABS)[number]
 
-function Editor({ userId, row }: { userId: string; row: PortfolioRow | null }) {
+function Editor({ userId, row, onDeleted }: { userId: string; row: PortfolioRow | null; onDeleted: () => void }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [params] = useSearchParams()
@@ -115,9 +118,9 @@ function Editor({ userId, row }: { userId: string; row: PortfolioRow | null }) {
   const remove = useMutation({
     mutationFn: () => deleteMyPortfolio(userId),
     onSuccess: () => {
+      onDeleted() // EditorPage moves on to Create with the "deleted" notice.
       queryClient.setQueryData(['my-portfolio', userId], null)
       queryClient.invalidateQueries({ queryKey: ['portfolio'] })
-      navigate('/create?deleted=1', { replace: true })
     },
   })
 

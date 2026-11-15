@@ -26,6 +26,8 @@ passed.
 | Upload records sent to the database (exact payload, claim token hash) | `tests/history.test.ts` |
 | Paste a link → picture, project, label; fallbacks | `tests/links.test.ts` |
 | Link preview server: HTML parsing, blocked addresses (SSRF) | `tests/preview.test.ts` |
+| LinkedIn: profile link → portfolio, résumé + link merge (résumé wins), LinkedIn PDF layout | `tests/linkedin.test.ts`, `tests/journey.test.tsx` |
+| Shared link previews: person-only title, tags and icon; escaping; unsafe photos dropped | `tests/portfolio-head.test.ts` |
 | Content cleaning (URLs, limits) | `tests/normalize.test.ts` |
 | Editor form conversions | `tests/form.test.ts` |
 | Sign-in redirects and passwords | `tests/validation.test.ts` |
@@ -47,6 +49,11 @@ New behaviour needs a test in the matching file, or a new file listed here.
       Tap targets are at least 40 px.
 - [ ] **Design kept.** Only existing tokens, utilities and components; no new colours or fonts
       unless asked.
+- [ ] **Shared portfolio is the person only.** `/p/<address>` and `/example` show no platform
+      name, logo, header, footer or menu; the tab title and icon are the person's.
+- [ ] **Bottom tabs on phones.** The tab bar does not cover content (pages pad the bottom).
+- [ ] **User-friendly, not developer-friendly.** No API/endpoint links or technical wording on
+      public pages.
 - [ ] **Keyboard and screen readers.** Labels on inputs, roles on status messages, visible focus.
 
 ## 4. Journey acceptance (must always hold)
@@ -60,6 +67,8 @@ New behaviour needs a test in the matching file, or a new file listed here.
    restores the previous version.
 6. Pasting a project link shows a preview card before anything is added. Pasting a website into
    a logo field shows the logo at once.
+7. A résumé plus a LinkedIn link builds one portfolio; nothing in the résumé is replaced.
+8. Deleting a portfolio lands on Create with "Your portfolio was deleted."
 
 ## 5. Security checklist
 

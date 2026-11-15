@@ -3,7 +3,7 @@ import { usePortfolio } from '../../app/PortfolioLayout'
 import { usePersonHead } from '../../lib/usePageTitle'
 import { Chips, ExternalLinks, HostedLink, SectionTitle } from '../../components/ui'
 import { WebImage } from '../../features/links/LinkFields'
-import { dateRange } from '../../content/normalize'
+import { dateRange, isTechnicalLink } from '../../content/normalize'
 
 /** "Jane Wanjiru Doe" → ["Jane Wanjiru", "Doe"], for the italic accent. */
 function splitName(name: string): [string, string] {
@@ -52,12 +52,12 @@ export function OverviewPage() {
             {featured.map((p) => (
               <article key={p.title} className="panel flex flex-col overflow-hidden">
                 <WebImage src={p.image} alt="" className="aspect-video w-full border-b border-line object-cover" />
-                <div className="flex flex-1 flex-col p-5">
-                <h3 className="display text-2xl">{p.title}</h3>
+                <div className="flex flex-1 flex-col p-4">
+                <h3 className="display text-xl leading-tight">{p.title}</h3>
                 {p.subtitle && <p className="text-sm text-muted">{p.subtitle}</p>}
-                <p className="mt-3 line-clamp-5 flex-1 text-sm">{p.description}</p>
+                <p className="mt-2 line-clamp-4 flex-1 text-sm leading-relaxed">{p.description}</p>
                 <div className="mt-4"><Chips items={p.tech.slice(0, 5)} label={`${p.title} technologies`} /></div>
-                <HostedLink link={p.links[0]} className="mt-3" />
+                <HostedLink link={p.links.find((l) => !isTechnicalLink(l))} className="mt-3" />
                 </div>
               </article>
             ))}
