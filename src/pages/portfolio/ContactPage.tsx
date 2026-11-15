@@ -1,10 +1,10 @@
 import { usePortfolio } from '../../app/PortfolioLayout'
-import { usePageTitle } from '../../lib/usePageTitle'
+import { usePersonHead } from '../../lib/usePageTitle'
 import { ExternalLinks, PageHeading } from '../../components/ui'
 
 export function ContactPage() {
   const { cv } = usePortfolio()
-  usePageTitle('Contact', cv.name)
+  usePersonHead(cv.name, 'Contact')
   const tel = cv.phone.replace(/[^\d+]/g, '')
 
   return (

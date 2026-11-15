@@ -1,11 +1,11 @@
 import { usePortfolio } from '../../app/PortfolioLayout'
-import { usePageTitle } from '../../lib/usePageTitle'
+import { usePersonHead } from '../../lib/usePageTitle'
 import { Chips, ExternalLinks, HostedLink, PageHeading, StatusMessage } from '../../components/ui'
 import { WebImage } from '../../features/links/LinkFields'
 
 export function ProjectsPage() {
   const { cv } = usePortfolio()
-  usePageTitle('Projects', cv.name)
+  usePersonHead(cv.name, 'Projects')
 
   return (
     <div className="container-page max-w-4xl py-10">

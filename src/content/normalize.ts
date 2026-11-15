@@ -140,3 +140,12 @@ export function dateRange(start: string, end: string): string {
   if (!start) return end
   return `${start} – ${end || 'Present'}`
 }
+
+/**
+ * Links meant for developers (API endpoints, docs for code) are not useful to
+ * portfolio visitors, so they are left out when reading résumés and hidden on
+ * public pages.
+ */
+export function isTechnicalLink(link: Link): boolean {
+  return /\b(api|apis|endpoint|swagger|graphql|openapi|webhook)\b/i.test(link.label) || /\/(api|graphql|swagger|docs\/api)(\/|$)|^https?:\/\/api\./i.test(link.url)
+}

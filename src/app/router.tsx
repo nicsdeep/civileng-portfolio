@@ -28,13 +28,14 @@ const portfolioPages = [
 ]
 
 export const router = createBrowserRouter([
+  // Shared portfolios stand alone: no platform header, footer or menus.
+  { path: '/p/:slug', element: <PortfolioLayout />, children: portfolioPages },
+  { path: '/example', element: <ExampleLayout />, children: portfolioPages },
   {
     element: <Layout />,
     children: [
       { path: '/', element: <LandingPage /> },
       { path: '/create', element: <CreatePage /> },
-      { path: '/example', element: <ExampleLayout />, children: portfolioPages },
-      { path: '/p/:slug', element: <PortfolioLayout />, children: portfolioPages },
       { path: '/finish', element: <RequireAuth><FinishPage /></RequireAuth> },
       { path: '/me', element: <RequireAuth><MePage /></RequireAuth> },
       { path: '/editor', element: <RequireAuth><EditorPage /></RequireAuth> },

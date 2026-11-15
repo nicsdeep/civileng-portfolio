@@ -1,6 +1,6 @@
 import { Link } from 'react-router'
 import { usePortfolio } from '../../app/PortfolioLayout'
-import { usePageTitle } from '../../lib/usePageTitle'
+import { usePersonHead } from '../../lib/usePageTitle'
 import { Chips, ExternalLinks, HostedLink, SectionTitle } from '../../components/ui'
 import { WebImage } from '../../features/links/LinkFields'
 import { dateRange } from '../../content/normalize'
@@ -13,7 +13,7 @@ function splitName(name: string): [string, string] {
 
 export function OverviewPage() {
   const { cv, basePath } = usePortfolio()
-  usePageTitle(cv.name)
+  usePersonHead(cv.name)
   const [first, last] = splitName(cv.name)
   const featured = cv.projects.filter((p) => p.featured).slice(0, 3)
   const recent = cv.experience.slice(0, 3)

@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import type { ReactNode } from 'react'
 import type { Link as CvLink } from '../content/types'
+import { isTechnicalLink } from '../content/normalize'
 
 /** Page heading in the house style: serif, with an italic teal accent word. */
 export function PageHeading({ eyebrow, title, accent, children }: { eyebrow?: string; title: string; accent?: string; children?: ReactNode }) {
@@ -38,7 +39,8 @@ export function Bullets({ items }: { items: string[] }) {
 }
 
 /** External links open in a new tab; URLs are already checked by normalizeCv. */
-export function ExternalLinks({ links, className = '' }: { links: CvLink[]; className?: string }) {
+export function ExternalLinks({ links: all, className = '' }: { links: CvLink[]; className?: string }) {
+  const links = all.filter((l) => !isTechnicalLink(l))
   if (links.length === 0) return null
   return (
     <ul className={`flex flex-wrap gap-x-4 gap-y-1 text-sm ${className}`}>

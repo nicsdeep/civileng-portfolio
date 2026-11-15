@@ -2,7 +2,8 @@ import { useRef, useState, type DragEvent, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { usePageTitle } from '../lib/usePageTitle'
 import { BackLink, PageHeading } from '../components/ui'
-import { parseResume } from '../features/import/parse'
+import { parseResume, type ParseResult } from '../features/import/parse'
+import { isLinkedInProfile, mergeProfiles, readLinkedIn } from '../features/import/linkedin'
 import { clearDraft, loadDraft, saveDraft, type Draft } from '../features/import/draft'
 import { ConfirmButton } from '../components/ConfirmButton'
 import { useAuth } from '../features/auth/AuthProvider'
@@ -32,6 +33,8 @@ export function CreatePage() {
   const navigate = useNavigate()
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
   const [pasted, setPasted] = useState('')
+  const [linkedIn, setLinkedIn] = useState('')
+  const linkedInOk = isLinkedInProfile(linkedIn)
   const [dragging, setDragging] = useState(false)
   const [draft, setDraft] = useState<Draft | null>(() => loadDraft())
   const [params] = useSearchParams()
@@ -45,23 +48,31 @@ export function CreatePage() {
     setStatus({ kind: 'working', step: `Reading ${file.name}…` })
     try {
       const { extractText } = await import('../features/import/extract')
-      await build(await extractText(file), file.name, file)
+      const text = await extractText(file)
+      await build(parseResume(text), text, file.name, file)
     } catch (error) {
       setStatus({ kind: 'error', message: (error instanceof Error && error.message) || 'This file could not be read. Try another format, or paste the text.' })
     }
   }
 
-  async function build(text: string, source: string, file?: File) {
-    const result = parseResume(text)
+  async function build(parsed: ParseResult, text: string, source: string, file?: File, fromLink = false) {
+    let result = parsed
     if (!result.cv.name && result.cv.experience.length === 0 && result.cv.education.length === 0) {
       setStatus({ kind: 'error', message: 'We could not find résumé sections in this text. Check it is your résumé, or start from scratch.' })
       return
+    }
+    // A LinkedIn link next to a résumé only fills what the résumé leaves empty.
+    if (!fromLink && linkedInOk) {
+      setStatus({ kind: 'working', step: 'Adding your LinkedIn details…' })
+      const { cv } = await readLinkedIn(linkedIn)
+      result = { ...result, cv: mergeProfiles(result.cv, cv) }
+      text += `\n\nLinkedIn: ${linkedIn.trim()}`
     }
     setStatus({ kind: 'working', step: 'Building your portfolio…' })
     let upload
     try {
       // Uploading means agreeing to the Privacy Policy shown next to the buttons.
-      upload = await recordUpload({ result, text, file, consentAt: new Date(), signedIn: Boolean(user) })
+      upload = await recordUpload({ result, text, file, consentAt: new Date(), signedIn: Boolean(user), fromLink })
     } catch (error) {
       setStatus({ kind: 'error', message: error instanceof HistoryError ? error.message : 'Could not read your résumé. Check your connection and try again.' })
       return
@@ -102,7 +113,15 @@ export function CreatePage() {
     event.preventDefault()
     if (pasted.trim().length < 40) return setStatus({ kind: 'error', message: 'Paste the full text of your résumé.' })
     setNotice(null)
-    void build(pasted, 'pasted text')
+    void build(parseResume(pasted), pasted, 'pasted text')
+  }
+
+  async function buildFromLinkedIn() {
+    setNotice(null)
+    setStatus({ kind: 'working', step: 'Reading your LinkedIn profile…' })
+    const { cv, complete } = await readLinkedIn(linkedIn)
+    const text = `LinkedIn: ${linkedIn.trim()}${complete ? '' : ' (LinkedIn did not share details)'}`
+    await build({ cv, skipped: [], phone: '' }, text, 'your LinkedIn profile', undefined, true)
   }
 
   function removeResume() {
@@ -192,6 +211,32 @@ export function CreatePage() {
       </div>
 
       {status.kind === 'error' && <p role="alert" className="mt-4 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">{status.message}</p>}
+
+      <section className="panel mt-6 p-5 sm:p-6">
+        <label htmlFor="linkedin" className="display block text-2xl">Add your <em className="text-brand-italic">LinkedIn</em></label>
+        <p className="mt-1 text-sm text-muted">
+          Optional. With a résumé, it adds your photo and anything missing; your résumé always comes first.
+        </p>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <input
+            id="linkedin"
+            className="field min-w-0 flex-1 text-base sm:text-sm"
+            placeholder="linkedin.com/in/your-name"
+            inputMode="url"
+            autoCapitalize="off"
+            value={linkedIn}
+            onChange={(e) => setLinkedIn(e.target.value)}
+          />
+          <button type="button" className="btn-secondary" disabled={!linkedInOk} onClick={() => void buildFromLinkedIn()}>
+            Build from LinkedIn only
+          </button>
+        </div>
+        {linkedIn && !linkedInOk && <p className="mt-1 text-xs text-danger">Paste your profile link, like linkedin.com/in/your-name.</p>}
+        <p className="mt-2 text-xs text-muted">
+          LinkedIn only shares your name, photo, headline and current role. For your full history, open your LinkedIn profile, tap{' '}
+          <strong>More → Save to PDF</strong>, and upload that file above.
+        </p>
+      </section>
 
       <form id="paste" onSubmit={onPaste} className="panel mt-6 p-5 sm:p-6">
         <label htmlFor="pasted" className="display block text-2xl">Or paste the <em className="text-brand-italic">text</em></label>
