@@ -32,10 +32,7 @@ Site Engineer | Acme Ltd
 
 const renderCreate = () => render(<MemoryRouter><CreatePage /></MemoryRouter>)
 
-const agree = () => fireEvent.click(screen.getByRole('checkbox', { name: /I agree/ }))
-
 async function pasteResume() {
-  agree()
   fireEvent.change(screen.getByLabelText(/paste the text/i), { target: { value: RESUME } })
   fireEvent.click(screen.getByRole('button', { name: 'Build my portfolio' }))
   await screen.findByText(/Here is what we/)
@@ -62,7 +59,7 @@ describe('removing a résumé on the Create page', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remove résumé' }))
 
     expect(loadDraft()).toBeNull()
-    expect(screen.getByRole('status').textContent).toMatch(/Résumé removed from this browser. A record of the upload is kept/)
+    expect(screen.getByRole('status').textContent).toMatch(/^Résumé removed from this browser\.✕?$/)
     expect((screen.getByLabelText(/paste the text/i) as HTMLTextAreaElement).value).toBe('')
   })
 
@@ -95,13 +92,13 @@ describe('removing a résumé on the Create page', () => {
 })
 
 describe('keeping uploads on record', () => {
-  it('needs agreement before anything is read', () => {
+  it('works straight away, with the one-line Privacy Policy notice next to the buttons', () => {
     renderCreate()
-    expect((screen.getByRole('button', { name: 'Choose résumé' }) as HTMLButtonElement).disabled).toBe(true)
-    fireEvent.change(screen.getByLabelText(/paste the text/i), { target: { value: RESUME } })
-    expect((screen.getByRole('button', { name: 'Build my portfolio' }) as HTMLButtonElement).disabled).toBe(true)
-    agree()
     expect((screen.getByRole('button', { name: 'Choose résumé' }) as HTMLButtonElement).disabled).toBe(false)
+    expect(screen.queryByRole('checkbox')).toBeNull()
+    const notes = screen.getAllByText(/By uploading, you agree to our/)
+    expect(notes).toHaveLength(2)
+    expect(screen.getAllByRole('link', { name: 'Privacy Policy' })[0].getAttribute('href')).toBe('/privacy')
   })
 
   it('records the upload, phone number included, and links the draft to it', async () => {
@@ -120,7 +117,6 @@ describe('keeping uploads on record', () => {
   it('does not go on if the record cannot be saved, and says why', async () => {
     history.fail = 'Too many uploads from this network. Please try again in an hour.'
     renderCreate()
-    agree()
     fireEvent.change(screen.getByLabelText(/paste the text/i), { target: { value: RESUME } })
     fireEvent.click(screen.getByRole('button', { name: 'Build my portfolio' }))
     expect((await screen.findByRole('alert')).textContent).toMatch(/Too many uploads/)
