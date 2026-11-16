@@ -123,7 +123,9 @@ saving.
 
 `src/features/import`: PDF (pdf.js, with layout: left-column headings, wrapped and side-by-side
 bullets), Word .docx (document XML) and plain text are read by rules in the browser. Sections are
-found by common heading names. The phone number is found for the private record but never put on
+found by common heading names. The name is the first header line that is not contact details
+or a street address ("3453 Caribou Crescent"), so the automatic address is made from the
+person's name. Owners can change the address any time in Edit → *Address & visibility*. The phone number is found for the private record but never put on
 the public page (people can add a public phone in the editor).
 
 ## 5. Data

@@ -502,6 +502,17 @@ export interface ParseResult {
   phone: string
 }
 
+const STREET_RE = /\b(street|st|road|rd|avenue|ave|crescent|cres|drive|dr|lane|ln|boulevard|blvd|court|ct|way|place|pl|close|terrace|highway|hwy|apt|suite|unit)\b\.?/i
+
+/** "3453 Caribou Crescent", "Apt 4, 12 Main St", "P.O. Box 123": never a name or a headline. */
+export function isStreetAddress(line: string): boolean {
+  const l = line.trim()
+  if (/^p\.?\s*o\.?\s*box\b/i.test(l)) return true
+  // A house number, then a street word ("1200 Bay St", "45B Ngong Road"). Postcodes such as
+  // "00100, Nairobi" and headlines such as "5 years in design" are not addresses.
+  return /^\d+[a-z]?\s+\p{L}/iu.test(l) && STREET_RE.test(l)
+}
+
 export function parseResume(text: string): ParseResult {
   const lines = mergeContinuations(
     text
@@ -525,8 +536,8 @@ export function parseResume(text: string): ParseResult {
   const headerText = header.join('\n')
   const links: Link[] = findLinks(headerText)
 
-  // Name: first header line that is not contact details.
-  const nameIndex = header.findIndex((l) => !EMAIL_RE.test(l) && !URL_TEST.test(l) && !PHONE_RE.test(l) && /\p{L}/u.test(l) && l.split(/\s+/).length <= 6)
+  // Name: first header line that is not contact details or a street address.
+  const nameIndex = header.findIndex((l) => !EMAIL_RE.test(l) && !URL_TEST.test(l) && !PHONE_RE.test(l) && !isStreetAddress(l) && /\p{L}/u.test(l) && l.split(/\s+/).length <= 6)
   if (nameIndex >= 0) {
     const name = tidy(header[nameIndex].replace(/[|,].*$/, ''))
     cv.name = name === name.toUpperCase() ? titleCase(name) : name
@@ -537,7 +548,7 @@ export function parseResume(text: string): ParseResult {
     .filter((_, i) => i !== nameIndex)
     .flatMap((l) => l.split(/\s*[|•·]\s*|\s{2,}/))
     .map(tidy)
-    .filter((p) => p && !EMAIL_RE.test(p) && !PHONE_RE.test(p) && !URL_TEST.test(p) && !/^\+?\d[\d\s-]*$/.test(p))
+    .filter((p) => p && !EMAIL_RE.test(p) && !PHONE_RE.test(p) && !URL_TEST.test(p) && !/^\+?\d[\d\s-]*$/.test(p) && !isStreetAddress(p))
   for (const piece of pieces) {
     const withoutPostcode = tidy(piece.replace(/^\d{3,6}\s*,?\s*/, ''))
     if (!cv.location && /^[\p{L} .'-]+,\s*[\p{L} .'-]+$/u.test(withoutPostcode) && withoutPostcode.split(/\s+/).length <= 6) cv.location = withoutPostcode

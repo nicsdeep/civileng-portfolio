@@ -14,6 +14,22 @@ Use this template:
 
 ---
 
+## 2026-11-16: Street address no longer taken as the name
+- **What and why:** an owner's portfolio address came out as `/p/3453-caribou-crescent`: the
+  résumé started with a street address, which the reader took for the name (and so the
+  address). `isStreetAddress` (a house number then a street word, or a P.O. box) now keeps
+  those lines out of the name and headline. Postcodes ("00100, Nairobi") and headlines
+  ("5 years in design") are unaffected. Existing portfolios keep their address; owners change it
+  in Edit → *Address & visibility*.
+- Also done since the last entry (in the ResearchHub repository): the portfolio sign-in redirect
+  `https://civileng-portfolio.vercel.app/**` is listed in ResearchHub's `supabase/config.toml`,
+  and its migrations workflow now adds placeholders for this app's migrations (as ours does), so
+  neither app's deploy removes the other's settings. That owner to-do is closed.
+- **Files:** `src/features/import/parse.ts`, `tests/import.test.ts`, `docs/PRD.md`.
+- **Tested:** lint clean, 69 tests passed, build, RLS unchanged (no database change).
+- **Unfinished / known issues:** none new.
+- **Next step:** owner to-dos still open: reset the old database password; test a real sign-up.
+
 ## 2026-11-15: LinkedIn import, person-only shared portfolios, bottom tabs, compact projects
 - **What and why:** the owner asked for portfolios from a LinkedIn link (alone or with a résumé,
   with no contradictions), shared links that show only the person (no platform branding),
