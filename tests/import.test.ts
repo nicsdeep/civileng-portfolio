@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest'
-import { findPhone, parseResume, sectionFor, slugify, takeDates } from '../src/features/import/parse'
+import { findPhone, isStreetAddress, parseResume, sectionFor, slugify, takeDates } from '../src/features/import/parse'
 import { docxXmlToText, pdfItemsToText, type PdfItem } from '../src/features/import/extract'
 import { slugProblem } from '../src/features/portfolio/api'
 
@@ -46,6 +46,18 @@ REFERENCES
 Available on request`
 
 describe('parseResume (plain text)', () => {
+  it('never takes a street address for the name or headline', () => {
+    const r = parseResume('3453 Caribou Crescent\nJane Doe\nSite Engineer\njane@example.com\n\nEXPERIENCE\nEngineer, Acme\n2020 – 2022')
+    expect(r.cv.name).toBe('Jane Doe')
+    expect(r.cv.headline).toBe('Site Engineer')
+    expect(slugify(r.cv.name)).toBe('jane-doe')
+  })
+
+  it('tells street addresses from postcodes and headlines', () => {
+    for (const a of ['3453 Caribou Crescent', '1200 Bay St.', '45B Ngong Road', 'P.O. Box 123, Nairobi']) expect(isStreetAddress(a)).toBe(true)
+    for (const a of ['00100, Nairobi, Kenya', '5 years in structural design', 'Jane Doe', 'Site Engineer']) expect(isStreetAddress(a)).toBe(false)
+  })
+
   const { cv, skipped } = parseResume(PLAIN)
 
   it('reads the header', () => {
