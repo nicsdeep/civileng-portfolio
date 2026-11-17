@@ -14,6 +14,31 @@ Use this template:
 
 ---
 
+## 2026-11-17: Addresses follow the name; old links keep working
+- **What and why:** the owner asked that addresses adjust on their own instead of being fixed by
+  hand (an address had come out as `3453-caribou-crescent`).
+  - **Automatic addresses follow the name** (`isAutoAddress`, `addressFollowsName` in
+    `publish.ts`): an address made from the name (or from a street address) moves when the name
+    changes, in the editor and on re-upload. A typed address never moves. The editor shows
+    "it becomes /p/… when you save".
+  - **Old links keep working:** new table `pf_slug_history` + trigger record previous addresses;
+    `pf_current_slug()` finds where a published portfolio lives now. The app redirects
+    (`PortfolioLayout`), and `api/portfolio-page.ts` answers old addresses with a 308 redirect so
+    link previews follow too. Old addresses are forgotten when re-taken or on delete.
+  - **One-off fix in the migration:** portfolios whose address looks like a street address move to
+    an address made from their name, when free (the old address then redirects).
+- **Files:** `supabase/migrations/20261117090000_pf_address_history.sql`,
+  `supabase/tests/rls_test.sql` (steps 20–24; expected ERROR count now 21), `.github/workflows/ci.yml`,
+  `src/features/portfolio/{publish,api,hooks}.ts`, `src/app/PortfolioLayout.tsx`,
+  `src/pages/EditorPage.tsx`, `api/portfolio-page.ts`, `vercel.json` (section passed to the
+  function), tests `import.test.ts`, `journey.test.tsx`, docs.
+- **Tested:** lint clean; 73 tests; build; RLS locally (21 expected errors, all CI greps pass); the
+  one-off fix run against seeded rows (`3453-caribou-crescent` → `nicholas-kioko`,
+  `12-main-st` → `amy-lee`, `jane-doe` untouched, old addresses recorded).
+- **Unfinished / known issues:** none. (If two street-address portfolios want the same name
+  address, the first gets it and the other keeps its address.)
+- **Next step:** after merge, check the live migration ran and that the owner's portfolio moved.
+
 ## 2026-11-16: Street address no longer taken as the name
 - **What and why:** an owner's portfolio address came out as `/p/3453-caribou-crescent`: the
   résumé started with a street address, which the reader took for the name (and so the

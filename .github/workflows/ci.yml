@@ -42,8 +42,8 @@ jobs:
       - name: Run Row Level Security tests
         run: |
           supabase/tests/run-rls-tests.sh 2>&1 | tee rls.log
-          # Expect exactly the 20 intentional errors from the test script.
-          test "$(grep -c 'ERROR' rls.log)" -eq 20 || { echo "::error::Unexpected RLS test result"; exit 1; }
+          # Expect exactly the 21 intentional errors from the test script.
+          test "$(grep -c 'ERROR' rls.log)" -eq 21 || { echo "::error::Unexpected RLS test result"; exit 1; }
           grep -q 'permission denied for table pf_profiles' rls.log
           # Nobody but the owner may see an unpublished portfolio.
           grep -A2 'b_sees_unpublished' rls.log | grep -qE '^ +0$'
@@ -53,6 +53,13 @@ jobs:
           grep -q 'pf_profiles_published_needs_slug' rls.log
           # Upload history: write-only, rate limited, kept after account deletion.
           grep -q 'permission denied for table pf_resume_uploads' rls.log
+          # Address history: old links follow, hidden or re-taken addresses do not, nobody reads it.
+          grep -A2 ' moved_to ' rls.log | grep -qE '^ +user-a-new$'
+          grep -A2 'moved_to_any_case' rls.log | grep -qE '^ +user-a-new$'
+          grep -A2 'hidden_not_found' rls.log | grep -qE '^ +t$'
+          grep -A2 'taken_by_c' rls.log | grep -qE '^ +t$'
+          grep -A2 'a_history_left' rls.log | grep -qE '^ +0$'
+          grep -q 'permission denied for table pf_slug_history' rls.log
           grep -q 'Too many uploads from this network' rls.log
           grep -A2 'anon_reads_files' rls.log | grep -qE '^ +0$'
           grep -A2 'uploads_kept' rls.log | grep -qE '^ +2 \| +0$'

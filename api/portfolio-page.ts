@@ -29,6 +29,19 @@ export async function GET(request: Request): Promise<Response> {
       const rows = res.ok ? ((await res.json()) as { content: unknown }[]) : []
       const person = personFromContent(rows[0]?.content)
       if (person) html = personalizeHtml(html, person, `${url.origin}/p/${slug}`)
+      else if (res.ok && rows.length === 0) {
+        // An old address: send link previews and visitors to where the portfolio lives now.
+        const moved = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/rpc/pf_current_slug`, {
+          method: 'POST',
+          headers: { apikey: SUPABASE_KEY, authorization: `Bearer ${SUPABASE_KEY}`, 'content-type': 'application/json' },
+          body: JSON.stringify({ old_slug: slug }),
+        })
+        const target = moved.ok ? ((await moved.json()) as unknown) : null
+        if (typeof target === 'string' && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(target)) {
+          const section = (url.searchParams.get('section') || '').replace(/[^a-z/-]/g, '')
+          return new Response(null, { status: 308, headers: { location: `/p/${target}${section ? `/${section}` : ''}`, 'cache-control': 'public, s-maxage=300' } })
+        }
+      }
     } catch {
       // Keep the plain page.
     }

@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Link, NavLink, Outlet, ScrollRestoration, useOutletContext, useParams, useSearchParams } from 'react-router'
+import { Link, NavLink, Navigate, Outlet, ScrollRestoration, useLocation, useOutletContext, useParams, useSearchParams } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { saveMyPortfolio, type PublicPortfolio } from '../features/portfolio/api'
-import { useMyPortfolio, usePortfolioBySlug } from '../features/portfolio/hooks'
+import { useMovedSlug, useMyPortfolio, usePortfolioBySlug } from '../features/portfolio/hooks'
 import { forgetPrevious, loadPrevious } from '../features/portfolio/publish'
 import { exampleCv } from '../content/example'
 import { StatusMessage } from '../components/ui'
@@ -207,8 +207,11 @@ export function PortfolioLayout() {
   const { slug = '' } = useParams()
   const lower = slug.toLowerCase()
   const query = usePortfolioBySlug(lower)
+  // An address that is free now may have moved: old links follow the portfolio.
+  const moved = useMovedSlug(lower, query.isSuccess && !query.data)
+  const location = useLocation()
 
-  if (query.isPending) return <Skeleton />
+  if (query.isPending || moved.isLoading) return <Skeleton />
   if (query.isError) {
     return (
       <div className="container-page py-16">
@@ -217,6 +220,10 @@ export function PortfolioLayout() {
         </StatusMessage>
       </div>
     )
+  }
+  if (!query.data && moved.data) {
+    const rest = location.pathname.replace(/^\/p\/[^/]+/, '')
+    return <Navigate to={`/p/${moved.data}${rest}${location.search}`} replace />
   }
   if (!query.data) {
     return (

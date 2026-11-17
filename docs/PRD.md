@@ -41,6 +41,14 @@ Returning owner ── opens site or link ──────┘
 4. **Live portfolio (`/p/<address>`)** opens straight away with a success banner: *"✓ Your
    portfolio is live!"* plus the address, a **Share link** button (native share sheet or copy)
    and close. The address comes from the name (`jane-doe`, or `jane-doe-2` if taken).
+   **Automatic addresses follow the name:** if the owner changes their name (in the editor or by
+   uploading a new résumé) and never typed an address themselves, the address moves to one made
+   from the new name. The editor says so before saving ("it becomes /p/… when you save"). An
+   address the owner typed never changes on its own.
+   **Old links keep working:** every previous address is remembered (`pf_slug_history`), and
+   visitors and link previews are sent on to the current address. An old address is forgotten
+   when someone else takes it, or when the portfolio is deleted. Hidden portfolios are never
+   found through old links.
 5. **Owner bar.** Whenever the owner views their own portfolio, a small bar reads *"This is your
    portfolio. Want to update it?"* with **Edit details**, **Upload new résumé** and **Share**.
    Share is hidden while the success banner is showing, so the same button never appears twice.
@@ -135,6 +143,9 @@ the public page (people can add a public phone in the editor).
   to their own row; visitors can read only the public columns of published rows.
 - `pf_resume_uploads` and the `pf-resumes` Storage bucket: the private upload history (§ 7).
   `source` is `file`, `paste` or `link` (a pasted profile link; no file).
+- `pf_slug_history` (slug → owner): previous addresses. No direct access; read only through
+  `pf_current_slug(old_slug)`, which returns the current address of a published portfolio.
+  Kept in step by a trigger on `pf_profiles`.
 - Portfolio fields include `photo`, `experience[].logo`, `education[].logo`, `projects[].image`
   and `certifications[].url`. These are image and page links, cleaned by `normalizeCv` (only
   https images, only http(s)/mailto links).

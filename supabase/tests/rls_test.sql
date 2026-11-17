@@ -1,6 +1,6 @@
 -- Row Level Security checks for the pf_ tables (two users + anonymous).
 -- Run with: supabase/tests/run-rls-tests.sh
--- CI expects exactly 20 ERROR lines (the "expect error" steps below).
+-- CI expects exactly 21 ERROR lines (the "expect error" steps below).
 \set A 'aaaaaaaa-0000-0000-0000-000000000001'
 \set B 'bbbbbbbb-0000-0000-0000-000000000002'
 \echo '1. User A creates an unpublished portfolio (user_id filled automatically)'
@@ -96,3 +96,37 @@ select count(*) as files_stored from storage.objects where bucket_id = 'pf-resum
 \echo '19. Deleting an account keeps its upload history'
 delete from auth.users where id = :'B';
 select count(*) as uploads_kept, count(user_id) as still_linked from public.pf_resume_uploads where id in (:'U1', :'U2');
+
+-- ---------------------------------------------------------------------------
+-- Address history: old links follow a portfolio to its new address
+-- ---------------------------------------------------------------------------
+\set C 'cccccccc-0000-0000-0000-000000000003'
+\echo '20. A moves from user-a to user-a-new; visitors following the old link find the new address'
+reset role; set role authenticated; select set_config('request.jwt.claim.sub', :'A', false);
+update public.pf_profiles set slug = 'user-a-new';
+reset role; set role anon; select set_config('request.jwt.claim.sub', '', false);
+select public.pf_current_slug('user-a') as moved_to;
+select public.pf_current_slug('USER-A') as moved_to_any_case;
+select public.pf_current_slug('nobody-here') as unknown_address;
+\echo '21. Nobody can read the address history directly (expect 1 error)'
+select * from public.pf_slug_history;
+\echo '22. Hidden portfolios are not found through old links'
+reset role; set role authenticated; select set_config('request.jwt.claim.sub', :'A', false);
+update public.pf_profiles set published = false;
+reset role; set role anon;
+select public.pf_current_slug('user-a') is null as hidden_not_found;
+reset role; set role authenticated; select set_config('request.jwt.claim.sub', :'A', false);
+update public.pf_profiles set published = true;
+\echo '23. When someone else takes the old address, it is theirs: the old link no longer redirects'
+reset role; insert into auth.users values (:'C');
+set role authenticated; select set_config('request.jwt.claim.sub', :'C', false);
+insert into public.pf_profiles (content, slug, published) values ('{"name": "User C"}', 'user-a', true);
+reset role; set role anon;
+select public.pf_current_slug('user-a') is null as taken_by_c;
+select content->>'name' as user_a_address_shows from public.pf_profiles where slug = 'user-a';
+\echo '24. Deleting a portfolio forgets its old addresses'
+reset role; set role authenticated; select set_config('request.jwt.claim.sub', :'A', false);
+update public.pf_profiles set slug = 'user-a-third';
+delete from public.pf_profiles;
+reset role;
+select count(*) as a_history_left from public.pf_slug_history where user_id = :'A';
