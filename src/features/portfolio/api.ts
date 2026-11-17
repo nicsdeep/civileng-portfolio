@@ -77,3 +77,9 @@ export async function saveMyPortfolio(userId: string, cv: Cv, slug: string | nul
   }
   return data as PortfolioRow
 }
+
+/** Where a portfolio that used to live at `oldSlug` lives now (published ones only), or null. */
+export async function fetchMovedSlug(oldSlug: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('pf_current_slug', { old_slug: oldSlug })
+  return error || typeof data !== 'string' || !data ? null : data
+}

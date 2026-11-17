@@ -1,4 +1,4 @@
-import { slugify } from '../import/parse'
+import { isStreetAddress, slugify } from '../import/parse'
 import { normalizeCv } from '../../content/normalize'
 import type { Cv } from '../../content/types'
 import { SaveError, fetchMyPortfolio, saveMyPortfolio, slugProblem, type PortfolioRow } from './api'
@@ -12,14 +12,38 @@ import { SaveError, fetchMyPortfolio, saveMyPortfolio, slugProblem, type Portfol
  *     banner can offer Undo.
  */
 
-/** Address candidates from a name: jane-doe, jane-doe-2 … jane-doe-9, then random. */
-export function slugCandidates(name: string): string[] {
+function slugBase(name: string): string {
   let base = slugify(name) || 'portfolio'
   if (base.length < 3) base = `${base}-portfolio`
-  base = base.slice(0, 34).replace(/-+$/, '')
+  return base.slice(0, 34).replace(/-+$/, '')
+}
+
+/** Address candidates from a name: jane-doe, jane-doe-2 … jane-doe-9, then random. */
+export function slugCandidates(name: string): string[] {
+  const base = slugBase(name)
   const list = [base, ...Array.from({ length: 8 }, (_, i) => `${base}-${i + 2}`)]
   list.push(`${base}-${Math.random().toString(36).slice(2, 6)}`)
   return list.filter((s) => !slugProblem(s))
+}
+
+/**
+ * True when an address was made automatically rather than chosen: it is one of
+ * the name's candidates (jane-doe, jane-doe-2, jane-doe-x7k2), or it came from
+ * a street address read as a name ("3453-caribou-crescent").
+ */
+export function isAutoAddress(slug: string, name: string): boolean {
+  if (isStreetAddress(slug.replace(/-/g, ' '))) return true
+  const base = slugBase(name)
+  return slug === base || new RegExp(`^${base}-([2-9]|[a-z0-9]{4})$`).test(slug)
+}
+
+/**
+ * Whether saving `newName` should move an automatic address to one made from
+ * the new name. Old links keep working (the database remembers old addresses).
+ */
+export function addressFollowsName(slug: string | null, oldName: string, newName: string): boolean {
+  if (!slug || !newName.trim() || !isAutoAddress(slug, oldName)) return false
+  return !isAutoAddress(slug, newName) || isStreetAddress(slug.replace(/-/g, ' '))
 }
 
 /** Saves under the first free address. */
@@ -94,7 +118,11 @@ export async function publishResume(userId: string, cv: Cv): Promise<{ slug: str
   const existing = await fetchMyPortfolio(userId)
   if (existing?.slug) {
     const previous = normalizeCv(existing.content)
-    const row = await saveMyPortfolio(userId, keepMedia(previous, cv), existing.slug, true)
+    const merged = keepMedia(previous, cv)
+    // An automatic address follows a changed name; a chosen one stays.
+    const row = addressFollowsName(existing.slug, previous.name, merged.name)
+      ? await saveWithFreeSlug(userId, merged, true)
+      : await saveMyPortfolio(userId, merged, existing.slug, true)
     rememberPrevious(row.slug!, previous)
     return { slug: row.slug!, replaced: true }
   }

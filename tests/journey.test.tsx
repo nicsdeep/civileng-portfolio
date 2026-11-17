@@ -24,6 +24,7 @@ const db = vi.hoisted(() => ({
   deleted: 0,
   recordFails: null as string | null,
   records: 0,
+  moved: {} as Record<string, string>,
 }))
 
 vi.mock('../src/features/auth/AuthProvider', () => ({ useAuth: () => ({ user: db.user, loading: false }) }))
@@ -52,6 +53,7 @@ vi.mock('../src/features/portfolio/api', async (original) => {
       db.row = { user_id: userId, slug, published, content: cv, updated_at: '' }
       return db.row
     },
+    fetchMovedSlug: async (slug: string) => db.moved[slug] ?? null,
     deleteMyPortfolio: async () => {
       db.deleted++
       db.row = null
@@ -112,7 +114,7 @@ async function pasteResume() {
 beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
-  Object.assign(db, { user: null, row: null, taken: new Set(), saves: [], deleted: 0, recordFails: null, records: 0 })
+  Object.assign(db, { user: null, row: null, taken: new Set(), saves: [], deleted: 0, recordFails: null, records: 0, moved: {} })
 })
 afterEach(cleanup)
 
@@ -232,6 +234,30 @@ describe('owner tools and editing', () => {
     renderAt('/p/jane')
     expect(await screen.findByText('Jane')).toBeTruthy()
     expect(screen.queryByText(/This is your portfolio/)).toBeNull()
+  })
+
+  it('an address made from the name follows a new name; old links are sent on', async () => {
+    db.row!.slug = 'jane-doe'
+    renderAt('/editor')
+    fireEvent.change(await screen.findByLabelText('Full name'), { target: { value: 'Jane Wanjiru' } })
+    expect(screen.getByText(/it becomes/).textContent).toMatch('/p/jane-wanjiru')
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(where()).toBe('/p/jane-wanjiru?status=saved'))
+    cleanup()
+    db.user = null
+    db.moved['jane-doe'] = 'jane-wanjiru'
+    renderAt('/p/jane-doe')
+    await waitFor(() => expect(where()).toBe('/p/jane-wanjiru'))
+    expect(await screen.findByText('Wanjiru')).toBeTruthy()
+  })
+
+  it('an address the owner typed stays when the name changes', async () => {
+    db.row!.slug = 'jane-builds'
+    renderAt('/editor')
+    fireEvent.change(await screen.findByLabelText('Full name'), { target: { value: 'Jane Wanjiru' } })
+    expect(screen.queryByText(/it becomes/)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(where()).toBe('/p/jane-builds?status=saved'))
   })
 
   it('saving in the editor goes straight back to the portfolio with a success message', async () => {

@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../features/auth/AuthProvider'
 import { deleteMyPortfolio, saveMyPortfolio, slugProblem, type PortfolioRow } from '../features/portfolio/api'
 import { useMyPortfolio } from '../features/portfolio/hooks'
-import { saveWithFreeSlug } from '../features/portfolio/publish'
+import { addressFollowsName, saveWithFreeSlug, slugCandidates } from '../features/portfolio/publish'
 import { ConfirmButton } from '../components/ConfirmButton'
 import { slugify } from '../features/import/parse'
 import { usePageTitle } from '../lib/usePageTitle'
@@ -73,6 +73,9 @@ function Editor({ userId, row, onDeleted }: { userId: string; row: PortfolioRow 
 
   const current = useMemo(() => fromForm(form), [form])
   const dirty = snapshot(current, slug, published) !== savedSnapshot
+  // An address made from the name follows a new name, unless the owner typed one.
+  const followsName = Boolean(row?.slug) && slug.trim() === row?.slug && addressFollowsName(row.slug, saved.name, current.name)
+  const nextAddress = followsName ? slugCandidates(current.name)[0] : null
 
   useEffect(() => {
     if (!dirty) return
@@ -84,8 +87,9 @@ function Editor({ userId, row, onDeleted }: { userId: string; row: PortfolioRow 
   const save = useMutation({
     mutationFn: async () => {
       const address = slug.trim()
-      // First save from scratch: pick a free address from the name.
-      return address ? saveMyPortfolio(userId, current, address, published) : saveWithFreeSlug(userId, current, published)
+      // First save from scratch, or an automatic address whose name changed: pick a free address from the name.
+      if (!address || followsName) return saveWithFreeSlug(userId, current, published)
+      return saveMyPortfolio(userId, current, address, published)
     },
     onSuccess: async (saved) => {
       queryClient.setQueryData(['my-portfolio', userId], saved)
@@ -208,7 +212,13 @@ function Editor({ userId, row, onDeleted }: { userId: string; row: PortfolioRow 
               spellCheck={false}
             />
           </div>
-          <p className="mt-1 text-xs text-muted">{slug ? 'Changing it breaks links you already shared.' : 'Left empty, it is made from your name.'}</p>
+          <p className="mt-1 text-xs text-muted" aria-live="polite">
+            {nextAddress
+              ? <>Made from your name: it becomes <strong>/p/{nextAddress}</strong> when you save. Links you already shared keep working.</>
+              : slug
+                ? 'Links you already shared keep working if you change it.'
+                : 'Left empty, it is made from your name.'}
+          </p>
         </div>
         <div>
           <span className="mb-1 block text-sm font-medium">Who can see it</span>

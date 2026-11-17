@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { findPhone, isStreetAddress, parseResume, sectionFor, slugify, takeDates } from '../src/features/import/parse'
 import { docxXmlToText, pdfItemsToText, type PdfItem } from '../src/features/import/extract'
 import { slugProblem } from '../src/features/portfolio/api'
+import { addressFollowsName, isAutoAddress } from '../src/features/portfolio/publish'
 
 // A made-up résumé in a common single-column layout (as pasted text).
 const PLAIN = `JANE WANJIRU DOE
@@ -199,5 +200,23 @@ describe('extracting text', () => {
       <w:tbl><w:tr><w:tc><w:p><w:r><w:t>Cell</w:t><w:tab/><w:t>text</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
     </w:body></w:document>`
     expect(docxXmlToText(xml)).toBe('Jane Doe\nSkills\n• Python\nCell  text')
+  })
+})
+
+describe('automatic addresses', () => {
+  it('knows which addresses were made from the name', () => {
+    expect(isAutoAddress('jane-doe', 'Jane Doe')).toBe(true)
+    expect(isAutoAddress('jane-doe-3', 'Jane Doe')).toBe(true)
+    expect(isAutoAddress('jane-doe-x7k2', 'Jane Doe')).toBe(true)
+    expect(isAutoAddress('3453-caribou-crescent', 'Jane Doe')).toBe(true)
+    expect(isAutoAddress('jane-builds', 'Jane Doe')).toBe(false)
+  })
+  it('moves only automatic addresses, and only when the name changes', () => {
+    expect(addressFollowsName('jane-doe', 'Jane Doe', 'Jane Wanjiru')).toBe(true)
+    expect(addressFollowsName('jane-doe', 'Jane Doe', 'jane doe')).toBe(false)
+    expect(addressFollowsName('jane-builds', 'Jane Doe', 'Jane Wanjiru')).toBe(false)
+    expect(addressFollowsName('3453-caribou-crescent', '3453 Caribou Crescent', 'Nicholas Kioko')).toBe(true)
+    expect(addressFollowsName('3453-caribou-crescent', 'Nicholas Kioko', 'Nicholas Kioko')).toBe(true)
+    expect(addressFollowsName(null, 'Jane Doe', 'Jane Wanjiru')).toBe(false)
   })
 })

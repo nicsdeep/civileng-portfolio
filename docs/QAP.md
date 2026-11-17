@@ -31,7 +31,8 @@ passed.
 | Content cleaning (URLs, limits) | `tests/normalize.test.ts` |
 | Editor form conversions | `tests/form.test.ts` |
 | Sign-in redirects and passwords | `tests/validation.test.ts` |
-| RLS: profiles, addresses, upload history (write-only, rate limit, retention, claiming) | `supabase/tests/rls_test.sql` |
+| RLS: profiles, addresses, upload history (write-only, rate limit, retention, claiming), address history (old links follow; hidden, re-taken and deleted ones do not; no direct reads) | `supabase/tests/rls_test.sql` |
+| Automatic addresses: which are automatic, when they follow the name | `tests/import.test.ts`, `tests/journey.test.tsx` |
 
 New behaviour needs a test in the matching file, or a new file listed here.
 
@@ -69,6 +70,8 @@ New behaviour needs a test in the matching file, or a new file listed here.
    a logo field shows the logo at once.
 7. A résumé plus a LinkedIn link builds one portfolio; nothing in the résumé is replaced.
 8. Deleting a portfolio lands on Create with "Your portfolio was deleted."
+9. Changing the name moves an automatic address (never a typed one), and the old link still
+   opens the portfolio.
 
 ## 5. Security checklist
 

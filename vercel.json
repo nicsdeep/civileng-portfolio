@@ -11,7 +11,7 @@
     },
     {
       "source": "/p/:slug/:section*",
-      "destination": "/api/portfolio-page?slug=:slug"
+      "destination": "/api/portfolio-page?slug=:slug&section=:section*"
     },
     {
       "source": "/((?!api/).*)",
