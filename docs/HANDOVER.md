@@ -14,6 +14,39 @@ Use this template:
 
 ---
 
+## 2026-11-20: Passwordless sign-in and a Research section
+- **What and why:** the owner asked to "remove completely the option to ask for password" and
+  had nowhere to put research ("Finish").
+  - **Passwordless:** one email sign-in page (`SignInPage`, also served at `/sign-up` and
+    `/forgot-password`, keeping `?next=`). `signInWithOtp` sends a link that signs in, creates the
+    account the first time and returns to `next` (`/finish` publishes). Sign-up, forgot-password
+    and change-password screens and `passwordProblem` removed; Create now goes to
+    `/sign-in?next=/finish`. Same approach as ResearchHub (shared Supabase Auth).
+  - **Research section:** `Research` type (title, kind, year, summary, aim, objectives, method,
+    significance, keywords, links) in the JSON content, cleaned in `normalizeCv`, a *Research*
+    tab in the editor (generic section editor) and a public `/research` page and tab (book icon)
+    shown when there is research. The example portfolio has a made-up item.
+  - **Owner data:** `20261120100000_pf_owner_research_section.sql` moves the owner's proposal from
+    Projects (added by PR #11) into Research with its parts as separate fields, and adds his
+    University of Leeds degree, which PR #11 skipped (it matched schools on their first word).
+- **Files:** `src/pages/auth/{SignInPage,AccountPage,AuthLayout}.tsx` (SignUp and ForgotPassword
+  pages removed), `src/app/router.tsx`, `src/features/auth/{AuthProvider,validation}.ts`,
+  `src/lib/supabase.ts`, `src/pages/CreatePage.tsx`, `src/content/{types,cv,normalize,example}.ts`,
+  `src/features/editor/form.ts`, `src/pages/portfolio/ResearchPage.tsx`, `src/app/PortfolioLayout.tsx`,
+  `src/components/icons.tsx`, the migration, tests (`normalize`, `form`, `validation`, `journey`),
+  `docs/PRD.md`, `docs/QAP.md`.
+- **Tested:** lint clean; 75 tests; build; RLS locally (21 expected errors); both owner migrations
+  in sequence on a seeded moved-address row (research moved with 4 objectives and 7 stages, other
+  projects kept, all four degrees present, re-run harmless); browser at 390 px on
+  `/example/research` and `/sign-up?next=/finish` (no password fields, no sideways scrolling).
+  The real email link was not followed (needs an inbox).
+- **Unfinished / known issues:** Supabase's built-in email sender is rate-limited (a few emails per
+  hour), so every new sign-in now depends on it; a custom SMTP sender is advisable before a live
+  demo. The link must be opened in the same browser (a code-entry option would remove that).
+  "Add research from a document" (upload) is not built yet.
+- **Next step:** after merge, check the migration log and that the live sign-in sends a link;
+  the owner signs in at /me and decides whether to make the portfolio public.
+
 ## 2026-11-20: Owner's research proposal and résumé details added to his portfolio
 - **What and why:** the owner asked (in the ResearchHub session, "Add direct I have no time") for
   his research proposal and résumé to be put on his portfolio for him, because the editor has no

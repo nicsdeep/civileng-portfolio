@@ -31,3 +31,14 @@ describe('editor form', () => {
     expect(new Set(keys).size).toBe(keys.length)
   })
 })
+
+describe('research in the editor form', () => {
+  it('round-trips research items, with one objective and stage per line', async () => {
+    const { toForm, fromForm } = await import('../src/features/editor/form')
+    const { emptyCv } = await import('../src/content/cv')
+    const cv = { ...emptyCv, research: [{ title: 'T', kind: 'Thesis', year: '2026', summary: 'S', aim: 'A', objectives: ['O1', 'O2'], method: ['M1: x', 'M2: y'], significance: 'G', keywords: ['K'], links: [] }] }
+    const form = toForm(cv)
+    expect(form.lists.research[0].objectives).toBe('O1\nO2')
+    expect(fromForm(form).research).toEqual(cv.research)
+  })
+})

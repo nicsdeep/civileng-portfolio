@@ -36,8 +36,11 @@ Returning owner ── opens site or link ──────┘
    small secondary link. There are no checkboxes and no review screen. A spinner says what is
    happening ("Reading…", "Building your portfolio…").
 3. **Account, only if needed.** Not signed in: the résumé waits in the browser, and the person
-   creates a free account on one screen ("One last step"). Already signed in: this step is
-   skipped.
+   enters only their email on one screen ("One last step"). **There are no passwords anywhere:**
+   we email a link (Supabase `signInWithOtp`) that signs them in, creates the account the first
+   time, and returns to `/finish`, which publishes the portfolio. The link must be opened in the
+   same browser, because the résumé waits there. `/sign-up` and `/forgot-password` show the same
+   email sign-in. Already signed in: this step is skipped.
 4. **Live portfolio (`/p/<address>`)** opens straight away with a success banner: *"✓ Your
    portfolio is live!"* plus the address, a **Share link** button (native share sheet or copy)
    and close. The address comes from the name (`jane-doe`, or `jane-doe-2` if taken).
@@ -52,8 +55,10 @@ Returning owner ── opens site or link ──────┘
 5. **Owner bar.** Whenever the owner views their own portfolio, a small bar reads *"This is your
    portfolio. Want to update it?"* with **Edit details**, **Upload new résumé** and **Share**.
    Share is hidden while the success banner is showing, so the same button never appears twice.
-6. **Edit (`/editor`)**: tabs for Profile, Experience, Education, Projects, Skills,
-   Certifications and Recommendations. **Save** goes straight back to the portfolio with
+6. **Edit (`/editor`)**: tabs for Profile, Experience, Education, Projects, Research, Skills,
+   Certifications and Recommendations. A **Research** item has a title, type (e.g. research
+   proposal, thesis, paper), year or status, background, aim, objectives and method stages (one
+   per line), significance, keywords and links. **Save** goes straight back to the portfolio with
    *"✓ Changes saved."* `?tab=projects` opens a tab directly.
 7. **Upload new résumé** (an owner using Create) updates the same portfolio in one go. It keeps
    the address, photo, logos, project pictures, links and credential links they added, and
@@ -64,8 +69,10 @@ Returning owner ── opens site or link ──────┘
   error pages offer *Home* or *Try again*.
 - **Phones (under 768 px)** get a fixed bottom tab bar instead of a menu: signed out Home ·
   Example · Create · Sign in; signed in My portfolio · Edit · Upload · Account. Shared
-  portfolios have their own tabs: About · Experience · Projects · Skills · Contact (only the
-  sections that have content).
+  portfolios have their own tabs: About · Experience · Projects · Research · Skills · Contact
+  (only the sections that have content). The Research page shows each item like an academic
+  summary: type and year, title, keywords, background, aim, numbered objectives, numbered
+  method stages, significance and links.
 - **Shared portfolios (`/p/<address>`, `/example`) stand alone.** No platform header, footer,
   logo, menu or name. The visitor sees only the person: their initials/photo and name at the
   top, their sections, and a footer with their name and email. The browser tab shows

@@ -93,6 +93,20 @@ export const exampleCv: Cv = {
       featured: true,
     },
   ],
+  research: [
+    {
+      title: 'Freeze–thaw durability of recycled-aggregate concrete in Ontario bridge decks',
+      kind: 'Master’s research (example)',
+      year: 'In progress',
+      summary: 'Made-up example. Recycled concrete aggregate lowers embodied carbon, but its performance under Ontario’s freeze–thaw cycles and de-icing salts is uncertain.',
+      aim: 'To test whether air-entrained recycled-aggregate concrete meets durability requirements for bridge decks in Ontario climates.',
+      objectives: ['Characterize recycled aggregates from three Ontario sources.', 'Measure freeze–thaw and salt-scaling resistance of trial mixes.', 'Recommend mix limits for deck applications.'],
+      method: ['Materials: aggregate absorption, density and residual mortar content.', 'Testing: rapid freeze–thaw cycling and salt-scaling tests on trial mixes.', 'Analysis: compare durability factors against natural-aggregate controls.'],
+      significance: 'Could let agencies use more recycled aggregate in structural concrete without shortening deck service life.',
+      keywords: ['Recycled aggregate', 'Freeze–thaw', 'Bridge decks', 'Durability'],
+      links: [],
+    },
+  ],
   certifications: [
     { name: 'Engineer-in-Training (EIT)', issuer: 'Professional Engineers Ontario', date: '2023', url: '' },
     { name: 'Working at Heights', issuer: 'Ontario Ministry of Labour', date: '2022', url: '' },

@@ -21,7 +21,7 @@ passed.
 
 | Area | Tests |
 |---|---|
-| Journey: upload → sign-up → `/finish` → live; signed-in upload → live with a free address; owner re-upload keeps media and offers Undo; save → portfolio; `?tab=`; delete; scratch | `tests/journey.test.tsx` |
+| Journey: upload → email sign-in (`/sign-in?next=/finish`) → `/finish` → live; signed-in upload → live with a free address; owner re-upload keeps media and offers Undo; save → portfolio; `?tab=`; delete; scratch | `tests/journey.test.tsx` |
 | Résumé reading (PDF layout, DOCX, text, dates, phone) | `tests/import.test.ts` |
 | Upload records sent to the database (exact payload, claim token hash) | `tests/history.test.ts` |
 | Paste a link → picture, project, label; fallbacks | `tests/links.test.ts` |
@@ -30,7 +30,8 @@ passed.
 | Shared link previews: person-only title, tags and icon; escaping; unsafe photos dropped | `tests/portfolio-head.test.ts` |
 | Content cleaning (URLs, limits) | `tests/normalize.test.ts` |
 | Editor form conversions | `tests/form.test.ts` |
-| Sign-in redirects and passwords | `tests/validation.test.ts` |
+| Sign-in redirects (passwordless; no password fields anywhere) | `tests/validation.test.ts`, `tests/journey.test.tsx` |
+| Research section: cleaning, method-stage parsing, editor round trip | `tests/normalize.test.ts`, `tests/form.test.ts` |
 | RLS: profiles, addresses, upload history (write-only, rate limit, retention, claiming), address history (old links follow; hidden, re-taken and deleted ones do not; no direct reads) | `supabase/tests/rls_test.sql` |
 | Automatic addresses: which are automatic, when they follow the name | `tests/import.test.ts`, `tests/journey.test.tsx` |
 

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { BackLink } from '../../components/ui'
 
-/** Centred card used by the sign-in, sign-up and password pages. */
+/** Centred card used by the sign-in pages. */
 export function AuthLayout({ title, accent, intro, children }: { title: string; accent?: string; intro?: ReactNode; children: ReactNode }) {
   return (
     <div className="container-page flex flex-col items-center py-8 sm:py-12">
