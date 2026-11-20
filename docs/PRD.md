@@ -35,7 +35,14 @@ Returning owner ── opens site or link ──────┘
    the public profile; a tip says LinkedIn's *More → Save to PDF* gives the full profile. "Start from scratch" is a
    small secondary link. There are no checkboxes and no review screen. A spinner says what is
    happening ("Reading…", "Building your portfolio…").
-3. **Account, only if needed.** Not signed in: the résumé waits in the browser, and the person
+3. **Guest publishing until 2026-11-27 05:30 UTC (owner's request, 7 days).** Until
+   `GUEST_UNTIL` (`src/features/auth/guest.ts`), nobody signs up: uploading starts a guest
+   session (a Supabase anonymous user kept in this browser) and the portfolio goes live at once.
+   Sign in, Account and email prompts are hidden for guests. Editing works from the same
+   browser. After that date the step below returns by itself (no deploy needed); guests keep
+   their portfolio and can add an email on the Account page (`updateUser({ email })`) to keep it
+   on other devices. Requires `enable_anonymous_sign_ins = true` in both apps' `config.toml`.
+   **Account, only if needed (after the guest period).** Not signed in: the résumé waits in the browser, and the person
    enters only their email on one screen ("One last step"). **There are no passwords anywhere:**
    we email a link (Supabase `signInWithOtp`) that signs them in, creates the account the first
    time, and returns to `/finish`, which publishes the portfolio. The link must be opened in the

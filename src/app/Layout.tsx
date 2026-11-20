@@ -3,6 +3,7 @@ import { BrandMark, Logo } from '../components/Logo'
 import { BottomNav, type BottomItem } from '../components/BottomNav'
 import { Icons } from '../components/icons'
 import { useAuth } from '../features/auth/AuthProvider'
+import { guestMode, isGuest } from '../features/auth/guest'
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   `rounded-full px-3 py-1.5 text-sm transition-colors ${isActive ? 'bg-accent-soft font-semibold text-accent' : 'text-muted hover:text-ink'}`
@@ -11,10 +12,12 @@ function AccountLinks() {
   const { user, loading } = useAuth()
   const cls = navClass
   if (loading) return null
+  // While guest publishing is on, accounts stay out of sight.
+  const quiet = guestMode()
   if (!user) {
     return (
       <>
-        <NavLink to="/sign-in" className={cls}>Sign in</NavLink>
+        {!quiet && <NavLink to="/sign-in" className={cls}>Sign in</NavLink>}
         <NavLink to="/create" className="btn-primary ml-1 h-9 py-0">Create portfolio</NavLink>
       </>
     )
@@ -22,7 +25,7 @@ function AccountLinks() {
   return (
     <>
       <NavLink to="/me" className={cls}>My portfolio</NavLink>
-      <NavLink to="/account" className={cls}>Account</NavLink>
+      {!(quiet && isGuest(user)) && <NavLink to="/account" className={cls}>Account</NavLink>}
     </>
   )
 }
@@ -31,18 +34,19 @@ function AccountLinks() {
 function SiteBottomNav() {
   const { user, loading } = useAuth()
   if (loading) return null
+  const quiet = guestMode()
   const items: BottomItem[] = user
     ? [
         { to: '/me', label: 'My portfolio', icon: Icons.person },
         { to: '/editor', label: 'Edit', icon: Icons.pencil },
         { to: '/create', label: 'Upload', icon: Icons.upload },
-        { to: '/account', label: 'Account', icon: Icons.key },
+        ...(quiet && isGuest(user) ? [] : [{ to: '/account', label: 'Account', icon: Icons.key }]),
       ]
     : [
         { to: '/', label: 'Home', icon: Icons.home, end: true },
         { to: '/example', label: 'Example', icon: Icons.eye },
         { to: '/create', label: 'Create', icon: Icons.plus },
-        { to: '/sign-in', label: 'Sign in', icon: Icons.key },
+        ...(quiet ? [] : [{ to: '/sign-in', label: 'Sign in', icon: Icons.key }]),
       ]
   return <BottomNav items={items} label="Main" />
 }

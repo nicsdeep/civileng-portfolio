@@ -33,6 +33,7 @@ passed.
 | Sign-in redirects (passwordless; no password fields anywhere) | `tests/validation.test.ts`, `tests/journey.test.tsx` |
 | Research section: cleaning, method-stage parsing, editor round trip | `tests/normalize.test.ts`, `tests/form.test.ts` |
 | RLS: profiles, addresses, upload history (write-only, rate limit, retention, claiming), address history (old links follow; hidden, re-taken and deleted ones do not; no direct reads) | `supabase/tests/rls_test.sql` |
+| Guest publishing window and guest detection; guest journey (no sign-up step) | `tests/guest.test.ts`, `tests/journey.test.tsx` |
 | Automatic addresses: which are automatic, when they follow the name | `tests/import.test.ts`, `tests/journey.test.tsx` |
 
 New behaviour needs a test in the matching file, or a new file listed here.
@@ -73,6 +74,8 @@ New behaviour needs a test in the matching file, or a new file listed here.
 8. Deleting a portfolio lands on Create with "Your portfolio was deleted."
 9. Changing the name moves an automatic address (never a typed one), and the old link still
    opens the portfolio.
+10. Until `GUEST_UNTIL`, a new visitor uploads and lands on their live portfolio with no
+   sign-in, email or password screen; after it, the email sign-in step returns.
 
 ## 5. Security checklist
 

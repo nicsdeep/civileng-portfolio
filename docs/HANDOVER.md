@@ -14,6 +14,35 @@ Use this template:
 
 ---
 
+## 2026-11-20: Guest publishing for 7 days (no sign-up, no email)
+- **What and why:** the owner asked that, for 7 days, people publish without any sign-up, sign-in
+  or password, and do not see that step; after 7 days sign-in returns.
+  - `src/features/auth/guest.ts`: `GUEST_UNTIL = 2026-11-27T05:30Z`, `guestMode()`,
+    `isGuest()`, `startGuestSession()` (Supabase anonymous sign-in).
+  - Create page: no account → guest session → publish straight away. `RequireAuth` (editor,
+    /me, /finish) starts a guest session instead of sending people to sign in.
+  - Header and phone tabs hide Sign in and Account during the window (Account stays for
+    email accounts).
+  - Account page for guests: "Keep your portfolio": add an email (`updateUser`) to use it on
+    other devices. Shown when Account is visible (after the window, or by direct link).
+  - `enable_anonymous_sign_ins = true` in this repo's `supabase/config.toml` **and in
+    ResearchHub's** (shared project: otherwise either app's config push would switch it off).
+    ResearchHub only gives signed-in users a private reading list, so guests reach nothing of
+    anyone else's there. Anonymous sign-ins are limited to 30 per hour per IP.
+  - If anonymous sign-in fails (e.g. switched off), the old email step is used, so nothing
+    breaks.
+- **Files:** `src/features/auth/{guest,RequireAuth}.ts(x)`, `src/pages/CreatePage.tsx`,
+  `src/app/Layout.tsx`, `src/pages/auth/AccountPage.tsx`, `supabase/config.toml`, tests
+  `guest.test.ts`, `journey.test.tsx` (guest sessions mocked), docs.
+- **Tested:** lint clean; 78 tests (3 runs); build; RLS unchanged (guests are the
+  `authenticated` role, like any user).
+- **Unfinished / known issues:** a guest who clears their browser or changes device before adding
+  an email cannot edit their portfolio any more (it stays live). The owner chose not to show
+  account prompts during the window.
+- **Next step:** after 2026-11-27 05:30 UTC sign-in returns on its own. Then decide whether to
+  switch anonymous sign-ins off in both `config.toml` files (existing guests keep their
+  sessions either way) and whether to remind guests to add an email.
+
 ## 2026-11-20: Passwordless sign-in and a Research section
 - **What and why:** the owner asked to "remove completely the option to ask for password" and
   had nowhere to put research ("Finish").

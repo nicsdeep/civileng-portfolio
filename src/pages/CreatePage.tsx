@@ -7,6 +7,7 @@ import { isLinkedInProfile, mergeProfiles, readLinkedIn } from '../features/impo
 import { clearDraft, loadDraft, saveDraft, type Draft } from '../features/import/draft'
 import { ConfirmButton } from '../components/ConfirmButton'
 import { useAuth } from '../features/auth/AuthProvider'
+import { startGuestSession } from '../features/auth/guest'
 import { HistoryError, recordUpload } from '../features/import/history'
 import { useMyPortfolio } from '../features/portfolio/hooks'
 import { publishResume } from '../features/portfolio/publish'
@@ -69,30 +70,32 @@ export function CreatePage() {
       text += `\n\nLinkedIn: ${linkedIn.trim()}`
     }
     setStatus({ kind: 'working', step: 'Building your portfolio…' })
+    // While guest publishing is on, no sign-up step: a guest session in this browser.
+    const userId = user?.id ?? (await startGuestSession())?.id ?? null
     let upload
     try {
       // Uploading means agreeing to the Privacy Policy shown next to the buttons.
-      upload = await recordUpload({ result, text, file, consentAt: new Date(), signedIn: Boolean(user), fromLink })
+      upload = await recordUpload({ result, text, file, consentAt: new Date(), signedIn: Boolean(userId), fromLink })
     } catch (error) {
       setStatus({ kind: 'error', message: error instanceof HistoryError ? error.message : 'Could not read your résumé. Check your connection and try again.' })
       return
     }
     saveDraft(result.cv, source, { uploadId: upload.id, claimToken: upload.claimToken })
 
-    if (!user) {
+    if (!userId) {
       // One step left: an account, so the portfolio is theirs. /finish publishes it.
       navigate('/sign-in?next=/finish')
       return
     }
-    await publishNow()
+    await publishNow(userId)
   }
 
-  async function publishNow() {
+  async function publishNow(userId: string) {
     const current = loadDraft()
-    if (!user || !current) return
+    if (!current) return
     setStatus({ kind: 'working', step: updating ? 'Updating your portfolio…' : 'Publishing your portfolio…' })
     try {
-      const { slug, replaced } = await publishResume(user.id, current.cv)
+      const { slug, replaced } = await publishResume(userId, current.cv)
       clearDraft()
       queryClient.invalidateQueries({ queryKey: ['my-portfolio'] })
       queryClient.invalidateQueries({ queryKey: ['portfolio', slug] })
@@ -100,6 +103,12 @@ export function CreatePage() {
     } catch (error) {
       setStatus({ kind: 'error', message: (error instanceof Error && error.message) || 'Could not publish. Try again.' })
     }
+  }
+
+  async function publishDraft() {
+    const userId = user?.id ?? (await startGuestSession())?.id
+    if (userId) await publishNow(userId)
+    else navigate('/sign-in?next=/finish')
   }
 
   function onDrop(event: DragEvent) {
@@ -171,7 +180,7 @@ export function CreatePage() {
             <p className="text-sm text-muted">Read from {draft.source}. One step left: publish it.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button type="button" className="btn-primary" onClick={() => (user ? void publishNow() : navigate('/sign-in?next=/finish'))}>
+            <button type="button" className="btn-primary" onClick={() => void publishDraft()}>
               Publish
             </button>
             <ConfirmButton question="Remove this résumé from this browser?" confirmLabel="Remove" onConfirm={removeResume}>
