@@ -14,6 +14,29 @@ Use this template:
 
 ---
 
+## 2026-11-20: Owner's research proposal and résumé details added to his portfolio
+- **What and why:** the owner asked (in the ResearchHub session, "Add direct I have no time") for
+  his research proposal and résumé to be put on his portfolio for him, because the editor has no
+  place for research. A one-off, data-only migration does it; no app code changed.
+  - Finds the owner's row by its first address `3453-caribou-crescent` (current slug, or
+    `pf_slug_history` after the 2026-11-17 move). Does nothing if not found (CI, fresh databases).
+  - Adds the proposal "Integrated Artificial Intelligence and Digital Twin Modeling for Resilient
+    and Optimized Infrastructure Planning in the Arctic Region" as the first, featured project
+    (replacing an earlier copy with the same title, so a re-run is harmless).
+  - Adds résumé education, certifications/memberships, experience and skills only where nothing
+    similar exists. Nothing is deleted; street address, phone and P.Eng licence number are not
+    added; `published` and `slug` are unchanged.
+  - The owner accepted that the proposal text is stored in this public repository.
+- **Files:** `supabase/migrations/20261120090000_pf_owner_research.sql`, this file.
+- **Tested:** locally on PostgreSQL 16 with all migrations: no owner row → notice only; seeded row
+  (moved address) → research first and featured, existing project kept, only missing items added;
+  re-run adds nothing new. RLS suite: 21 expected errors, unchanged.
+- **Unfinished / known issues:** a proper Research section (editor + public tab + "Add research
+  from a document") and passwordless sign-in were also requested and are still to do; the owner's
+  answers to those questions are pending in the portfolio session.
+- **Next step:** confirm the migration ran on the live project (workflow log shows "Owner
+  portfolio updated: …"), then the owner signs in at /me to see it.
+
 ## 2026-11-17: Addresses follow the name; old links keep working
 - **What and why:** the owner asked that addresses adjust on their own instead of being fixed by
   hand (an address had come out as `3453-caribou-crescent`).
