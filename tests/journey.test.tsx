@@ -25,9 +25,21 @@ const db = vi.hoisted(() => ({
   recordFails: null as string | null,
   records: 0,
   moved: {} as Record<string, string>,
+  guests: false,
 }))
 
 vi.mock('../src/features/auth/AuthProvider', () => ({ useAuth: () => ({ user: db.user, loading: false }) }))
+// Guest publishing (time-limited): on when db.guests is true.
+vi.mock('../src/features/auth/guest', () => ({
+  GUEST_UNTIL: new Date(0),
+  guestMode: () => db.guests,
+  isGuest: (user: { is_anonymous?: boolean } | null) => Boolean(user?.is_anonymous),
+  startGuestSession: async () => {
+    if (!db.guests) return null
+    db.user = { id: 'guest-1' }
+    return db.user
+  },
+}))
 vi.mock('../src/features/import/history', async (original) => {
   const real = await original<typeof import('../src/features/import/history')>()
   return {
@@ -114,11 +126,21 @@ async function pasteResume() {
 beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
-  Object.assign(db, { user: null, row: null, taken: new Set(), saves: [], deleted: 0, recordFails: null, records: 0, moved: {} })
+  Object.assign(db, { user: null, row: null, taken: new Set(), saves: [], deleted: 0, recordFails: null, records: 0, moved: {}, guests: false })
 })
 afterEach(cleanup)
 
 describe('upload → live portfolio', () => {
+  it('while guest publishing is on, a new visitor goes live with no sign-up step', async () => {
+    db.guests = true
+    renderAt('/create')
+    await pasteResume()
+    await waitFor(() => expect(where()).toBe('/p/jane-doe?status=new'))
+    expect(db.saves.at(-1)!.cv.name).toBe('Jane Doe')
+    expect(db.records).toBe(1)
+    expect(screen.queryByText(/password|sign in|create account/i)).toBeNull()
+  })
+
   it('a new visitor uploads, then is asked for an account once', async () => {
     renderAt('/create')
     await pasteResume()
