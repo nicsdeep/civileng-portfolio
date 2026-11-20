@@ -51,6 +51,25 @@ export interface Project {
   featured: boolean
 }
 
+/** A research proposal, thesis or paper, with the parts readers of academic work look for. */
+export interface Research {
+  title: string
+  /** e.g. "Research proposal", "Thesis", "Journal paper". */
+  kind: string
+  /** Free text, e.g. "2026" or "In progress". */
+  year: string
+  /** Background or abstract. */
+  summary: string
+  aim: string
+  objectives: string[]
+  /** Method stages in order, e.g. "Data acquisition: …". */
+  method: string[]
+  significance: string
+  keywords: string[]
+  /** DOI, paper or document links. */
+  links: Link[]
+}
+
 export interface Certification {
   name: string
   issuer: string
@@ -82,6 +101,7 @@ export interface Cv {
   experience: Experience[]
   education: Education[]
   projects: Project[]
+  research: Research[]
   certifications: Certification[]
   interests: string[]
   testimonials: Testimonial[]

@@ -81,7 +81,7 @@ export function CreatePage() {
 
     if (!user) {
       // One step left: an account, so the portfolio is theirs. /finish publishes it.
-      navigate('/sign-up?next=/finish')
+      navigate('/sign-in?next=/finish')
       return
     }
     await publishNow()
@@ -171,7 +171,7 @@ export function CreatePage() {
             <p className="text-sm text-muted">Read from {draft.source}. One step left: publish it.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button type="button" className="btn-primary" onClick={() => (user ? void publishNow() : navigate('/sign-up?next=/finish'))}>
+            <button type="button" className="btn-primary" onClick={() => (user ? void publishNow() : navigate('/sign-in?next=/finish'))}>
               Publish
             </button>
             <ConfirmButton question="Remove this résumé from this browser?" confirmLabel="Remove" onConfirm={removeResume}>

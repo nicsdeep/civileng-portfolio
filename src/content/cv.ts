@@ -15,6 +15,7 @@ export const emptyCv: Cv = {
   experience: [],
   education: [],
   projects: [],
+  research: [],
   certifications: [],
   interests: [],
   testimonials: [],

@@ -122,7 +122,7 @@ describe('upload → live portfolio', () => {
   it('a new visitor uploads, then is asked for an account once', async () => {
     renderAt('/create')
     await pasteResume()
-    await waitFor(() => expect(where()).toBe('/sign-up?next=/finish'))
+    await waitFor(() => expect(where()).toBe('/sign-in?next=/finish'))
     expect(db.records).toBe(1)
     expect(loadDraft()?.cv.name).toBe('Jane Doe')
     expect(db.saves).toHaveLength(0)

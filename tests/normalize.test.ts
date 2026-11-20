@@ -65,3 +65,25 @@ describe('dateRange', () => {
     expect(dateRange('', '2024')).toBe('2024')
   })
 })
+
+describe('research', () => {
+  it('keeps research items with a title and cleans their fields', async () => {
+    const { normalizeCv } = await import('../src/content/normalize')
+    const cv = normalizeCv({
+      research: [
+        { title: '  AI and Digital Twins for Arctic infrastructure ', kind: 'Research proposal', objectives: ['One', '', 'Two'], method: ['Data acquisition: collect data'], keywords: ['AI'], links: [{ label: 'DOI', url: 'javascript:alert(1)' }] },
+        { title: '', aim: 'dropped' },
+      ],
+    })
+    expect(cv.research).toHaveLength(1)
+    expect(cv.research[0]).toMatchObject({ title: 'AI and Digital Twins for Arctic infrastructure', objectives: ['One', 'Two'], method: ['Data acquisition: collect data'] })
+    expect(cv.research[0].links).toEqual([])
+  })
+
+  it('splits method stages into a name and a description', async () => {
+    const { splitStage } = await import('../src/content/normalize')
+    expect(splitStage('Stage 1: Data Acquisition: collect data')).toEqual(['Data Acquisition', 'collect data'])
+    expect(splitStage('Optimization: compare strategies')).toEqual(['Optimization', 'compare strategies'])
+    expect(splitStage('Plain description without a name')).toEqual(['', 'Plain description without a name'])
+  })
+})

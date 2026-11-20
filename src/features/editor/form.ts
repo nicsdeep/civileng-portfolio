@@ -33,7 +33,7 @@ export interface SectionDef {
   title: (item: FormItem) => string
 }
 
-export type ListSection = 'skills' | 'experience' | 'education' | 'projects' | 'certifications' | 'testimonials'
+export type ListSection = 'skills' | 'experience' | 'education' | 'projects' | 'research' | 'certifications' | 'testimonials'
 
 export const PROFILE_FIELDS: FieldDef[] = [
   { key: 'name', label: 'Full name', kind: 'text', half: true },
@@ -91,6 +91,24 @@ export const SECTIONS: SectionDef[] = [
       { key: 'tech', label: 'Technologies', kind: 'lines', hint: 'One per line.' },
       { key: 'links', label: 'Links', kind: 'links', hint: 'The first link shows under the project as its live site.' },
       { key: 'featured', label: 'Feature on the home page', kind: 'checkbox' },
+    ],
+  },
+  {
+    key: 'research',
+    label: 'Research',
+    itemLabel: 'research item',
+    title: (i) => String(i.title || 'New research'),
+    fields: [
+      { key: 'title', label: 'Title', kind: 'text' },
+      { key: 'kind', label: 'Type', kind: 'text', half: true, hint: 'e.g. Research proposal, Thesis, Journal paper' },
+      { key: 'year', label: 'Year or status', kind: 'text', half: true, hint: 'e.g. 2026, In progress' },
+      { key: 'summary', label: 'Background or abstract', kind: 'textarea' },
+      { key: 'aim', label: 'Aim', kind: 'textarea' },
+      { key: 'objectives', label: 'Objectives', kind: 'lines', hint: 'One per line.' },
+      { key: 'method', label: 'Method', kind: 'lines', hint: 'One stage per line, e.g. “Data acquisition: …”.' },
+      { key: 'significance', label: 'Significance', kind: 'textarea' },
+      { key: 'keywords', label: 'Keywords', kind: 'lines', hint: 'One per line.' },
+      { key: 'links', label: 'Links', kind: 'links', hint: 'DOI, paper or document links (optional).' },
     ],
   },
   {

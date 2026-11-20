@@ -145,12 +145,14 @@ function PortfolioFrame({ portfolio, example = false, slug }: { portfolio: Publi
   const has = {
     experience: cv.experience.length + cv.education.length > 0,
     projects: cv.projects.length > 0,
+    research: cv.research.length > 0,
     skills: cv.skills.length + cv.certifications.length + cv.interests.length > 0,
   }
   const sections: BottomItem[] = [
     { to: base, label: 'About', icon: Icons.person, end: true },
     ...(has.experience ? [{ to: `${base}/experience`, label: 'Experience', icon: Icons.briefcase }] : []),
     ...(has.projects ? [{ to: `${base}/projects`, label: 'Projects', icon: Icons.grid }] : []),
+    ...(has.research ? [{ to: `${base}/research`, label: 'Research', icon: Icons.book }] : []),
     ...(has.skills ? [{ to: `${base}/skills`, label: 'Skills', icon: Icons.star }] : []),
     { to: `${base}/contact`, label: 'Contact', icon: Icons.mail },
   ]

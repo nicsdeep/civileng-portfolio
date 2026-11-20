@@ -1,4 +1,4 @@
-import type { Certification, Cv, Education, Experience, Link, Project, SkillGroup, Testimonial } from './types'
+import type { Certification, Cv, Education, Experience, Link, Project, Research, SkillGroup, Testimonial } from './types'
 
 /*
  * Turns stored JSON (or the editor's working copy) into a clean Cv:
@@ -102,6 +102,22 @@ function project(value: unknown): Project {
   }
 }
 
+function research(value: unknown): Research {
+  const raw = obj(value)
+  return {
+    title: text(raw.title),
+    kind: text(raw.kind),
+    year: text(raw.year),
+    summary: text(raw.summary, MAX_LONG),
+    aim: text(raw.aim, MAX_LONG),
+    objectives: strings(raw.objectives, MAX_LONG),
+    method: strings(raw.method, MAX_LONG),
+    significance: text(raw.significance, MAX_LONG),
+    keywords: strings(raw.keywords),
+    links: links(raw.links),
+  }
+}
+
 function certification(value: unknown): Certification {
   const raw = obj(value)
   return { name: text(raw.name), issuer: text(raw.issuer), date: text(raw.date), url: safeUrl(raw.url).startsWith('http') ? safeUrl(raw.url) : '' }
@@ -129,6 +145,7 @@ export function normalizeCv(value: unknown): Cv {
     experience: list(raw.experience, experience, (e) => e.role !== '' || e.org !== ''),
     education: list(raw.education, education, (e) => e.degree !== '' || e.school !== ''),
     projects: list(raw.projects, project, (p) => p.title !== ''),
+    research: list(raw.research, research, (r) => r.title !== ''),
     certifications: list(raw.certifications, certification, (c) => c.name !== ''),
     interests: strings(raw.interests),
     testimonials: list(raw.testimonials, testimonial, (t) => t.quote !== ''),
@@ -148,4 +165,10 @@ export function dateRange(start: string, end: string): string {
  */
 export function isTechnicalLink(link: Link): boolean {
   return /\b(api|apis|endpoint|swagger|graphql|openapi|webhook)\b/i.test(link.label) || /\/(api|graphql|swagger|docs\/api)(\/|$)|^https?:\/\/api\./i.test(link.url)
+}
+
+/** "Data acquisition: Infrastructure…" → ["Data acquisition", "Infrastructure…"]. */
+export function splitStage(stage: string): [string, string] {
+  const match = /^(?:Stage\s*\d+\s*[:.-]\s*)?([^:]{2,60}):\s*(.+)$/i.exec(stage)
+  return match ? [match[1].trim(), match[2].trim()] : ['', stage.replace(/^Stage\s*\d+\s*[:.-]\s*/i, '')]
 }

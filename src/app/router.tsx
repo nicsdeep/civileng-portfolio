@@ -6,6 +6,7 @@ import { CreatePage } from '../pages/CreatePage'
 import { OverviewPage } from '../pages/portfolio/OverviewPage'
 import { ExperiencePage } from '../pages/portfolio/ExperiencePage'
 import { ProjectsPage } from '../pages/portfolio/ProjectsPage'
+import { ResearchPage } from '../pages/portfolio/ResearchPage'
 import { SkillsPage } from '../pages/portfolio/SkillsPage'
 import { ContactPage } from '../pages/portfolio/ContactPage'
 import { EditorPage } from '../pages/EditorPage'
@@ -13,8 +14,6 @@ import { NotFoundPage } from '../pages/NotFoundPage'
 import { PrivacyPage } from '../pages/PrivacyPage'
 import { FinishPage, MePage } from '../pages/FinishPage'
 import { SignInPage } from '../pages/auth/SignInPage'
-import { SignUpPage } from '../pages/auth/SignUpPage'
-import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage'
 import { AccountPage } from '../pages/auth/AccountPage'
 import { RequireAuth } from '../features/auth/RequireAuth'
 
@@ -23,6 +22,7 @@ const portfolioPages = [
   { index: true, element: <OverviewPage /> },
   { path: 'experience', element: <ExperiencePage /> },
   { path: 'projects', element: <ProjectsPage /> },
+  { path: 'research', element: <ResearchPage /> },
   { path: 'skills', element: <SkillsPage /> },
   { path: 'contact', element: <ContactPage /> },
 ]
@@ -42,8 +42,9 @@ export const router = createBrowserRouter([
       { path: '/account', element: <RequireAuth><AccountPage /></RequireAuth> },
       { path: '/privacy', element: <PrivacyPage /> },
       { path: '/sign-in', element: <SignInPage /> },
-      { path: '/sign-up', element: <SignUpPage /> },
-      { path: '/forgot-password', element: <ForgotPasswordPage /> },
+      // Passwordless: old sign-up and reset addresses show the same email sign-in (keeping ?next=).
+      { path: '/sign-up', element: <SignInPage /> },
+      { path: '/forgot-password', element: <SignInPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },
